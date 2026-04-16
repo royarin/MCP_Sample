@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -17,15 +17,15 @@ namespace OpsDesk.Api.Migrations
                 name: "Incidents",
                 columns: table => new
                 {
-                    IncidentNumber = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    SystemId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Title = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: false),
-                    Severity = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    ReportedBy = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    CurrentStatus = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    StatusMessage = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
-                    CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
+                    IncidentNumber = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
+                    SystemId = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    Title = table.Column<string>(type: "TEXT", maxLength: 300, nullable: false),
+                    Description = table.Column<string>(type: "TEXT", maxLength: 2000, nullable: false),
+                    Severity = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
+                    ReportedBy = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
+                    CurrentStatus = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
+                    StatusMessage = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -36,10 +36,10 @@ namespace OpsDesk.Api.Migrations
                 name: "SystemOwners",
                 columns: table => new
                 {
-                    SystemId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    TeamName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    ContactEmail = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    SlackChannel = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false)
+                    SystemId = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    TeamName = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
+                    ContactEmail = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
+                    SlackChannel = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -50,10 +50,10 @@ namespace OpsDesk.Api.Migrations
                 name: "SystemRunbooks",
                 columns: table => new
                 {
-                    SystemId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Title = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: false),
-                    Url = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
-                    LastReviewed = table.Column<DateOnly>(type: "date", nullable: false)
+                    SystemId = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    Title = table.Column<string>(type: "TEXT", maxLength: 300, nullable: false),
+                    Url = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
+                    LastReviewed = table.Column<DateOnly>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -64,10 +64,10 @@ namespace OpsDesk.Api.Migrations
                 name: "SystemStatuses",
                 columns: table => new
                 {
-                    SystemId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    Message = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
-                    UpdatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
+                    SystemId = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    Status = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
+                    Message = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
+                    UpdatedAt = table.Column<DateTimeOffset>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {

@@ -68,13 +68,17 @@
                     "defaultSslBinding": true
                   }
                 ],
-                "publicIPAddresses": null,
+                "publicIPAddresses": [
+                  "9.223.74.34"
+                ],
                 "privateIPAddresses": null,
                 "additionalLocations": null,
                 "virtualNetworkConfiguration": null,
                 "customProperties": {
                   "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Protocols.Tls10": "False",
                   "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Protocols.Tls11": "False",
+                  "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Protocols.Ssl30": "False",
+                  "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Ciphers.TripleDes168": "False",
                   "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Backend.Protocols.Tls10": "False",
                   "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Backend.Protocols.Tls11": "False",
                   "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Backend.Protocols.Ssl30": "False",
@@ -88,8 +92,8 @@
                 }
               },
               "sku": {
-                "name": "Consumption",
-                "capacity": 0
+                "name": "Developer",
+                "capacity": 1
               },
               "apiVersion": "2019-12-01"
             },
@@ -108,7 +112,8 @@
                 ],
                 "authenticationSettings": {
                   "oAuth2": null,
-                  "openid": null
+                  "openid": null,
+                  "returnProtectedResourceMetadata": false
                 },
                 "subscriptionKeyParameterNames": {
                   "header": "Ocp-Apim-Subscription-Key",

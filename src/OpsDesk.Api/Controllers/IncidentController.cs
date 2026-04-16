@@ -12,8 +12,11 @@ public class IncidentController(AppDbContext db) : ControllerBase
     /// <summary>Returns all incidents, ordered most recent first.</summary>
     [HttpGet]
     [ProducesResponseType<IEnumerable<Incident>>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAll() =>
-        Ok(await db.Incidents.OrderByDescending(i => i.CreatedAt).ToListAsync());
+    public async Task<IActionResult> GetAll()
+    {
+        var incidents = await db.Incidents.ToListAsync();
+        return Ok(incidents.OrderByDescending(i => i.CreatedAt));
+    }
 
     /// <summary>Returns a single incident by incident number.</summary>
     [HttpGet("{incidentNumber}")]
