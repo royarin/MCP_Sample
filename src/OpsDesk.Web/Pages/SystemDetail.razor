@@ -1,0 +1,270 @@
+@page "/system/{SystemId}"
+@inject ApiClient Api
+@inject NavigationManager Nav
+
+<PageTitle>@SystemId — Ops Center</PageTitle>
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/">Dashboard</a></li>
+        <li class="breadcrumb-item active">@SystemId</li>
+    </ol>
+</nav>
+
+@if (loading)
+{
+    <div class="d-flex align-items-center gap-2">
+        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+        <span>Loading...</span>
+    </div>
+}
+else if (loadError != null)
+{
+    <div class="alert alert-danger">@loadError</div>
+}
+else
+{
+    <div class="d-flex align-items-center gap-3 mb-4">
+        <h1 class="mb-0 text-capitalize">@SystemId</h1>
+        @if (status != null)
+        {
+            <span class="badge @BadgeClass(status.Status) fs-5">@StatusIcon(status.Status) @status.Status.ToString().ToUpper()</span>
+        }
+    </div>
+
+    <div class="row g-4">
+
+        <!-- ── Status Card ──────────────────────────────────── -->
+        <div class="col-md-6">
+            <div class="card h-100 shadow-sm border-2 @BorderClass(status?.Status ?? SystemHealthStatus.Unknown)">
+                <div class="card-header fw-semibold @HeaderClass(status?.Status ?? SystemHealthStatus.Unknown)">📊 Current Status</div>
+                <div class="card-body">
+                    @if (status != null)
+                    {
+                        <p class="mb-1"><strong>Message:</strong> @status.Message</p>
+                        <small class="text-muted">Last updated: @status.UpdatedAt.ToLocalTime().ToString("g")</small>
+                    }
+
+                    <hr />
+                    <h6 class="mb-3">Update Status</h6>
+                    <div class="mb-2">
+                        <label class="form-label">New Status</label>
+                        <select class="form-select" @bind="updateReq.Status">
+                            <option value="Green">✅ Green — Healthy</option>
+                            <option value="Yellow">⚠️ Yellow — Warning</option>
+                            <option value="Red">🔴 Red — Critical</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Message</label>
+                        <input class="form-control" @bind="updateReq.Message" placeholder="Describe current state…" />
+                    </div>
+                    @if (statusMsg != null)
+                    {
+                        <div class="alert @(statusMsgIsError ? "alert-danger" : "alert-success") py-2">@statusMsg</div>
+                    }
+                    <button class="btn btn-primary" @onclick="UpdateStatusAsync" disabled="@updatingStatus">
+                        @if (updatingStatus) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        Save Status
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Owner Card ──────────────────────────────────── -->
+        <div class="col-md-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header fw-semibold bg-light">👥 System Owner</div>
+                <div class="card-body">
+                    @if (owner != null)
+                    {
+                        <table class="table table-sm table-borderless mb-0">
+                            <tr><th class="w-50 text-muted">Team</th><td>@owner.TeamName</td></tr>
+                            <tr><th class="text-muted">Email</th><td><a href="mailto:@owner.ContactEmail">@owner.ContactEmail</a></td></tr>
+                            <tr><th class="text-muted">Slack</th><td><code>@owner.SlackChannel</code></td></tr>
+                        </table>
+                    }
+                    else
+                    {
+                        <span class="text-muted">No owner registered.</span>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Runbook Card ────────────────────────────────── -->
+        <div class="col-md-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header fw-semibold bg-light">📖 Runbook</div>
+                <div class="card-body">
+                    @if (runbook != null)
+                    {
+                        <p class="mb-1"><strong>@runbook.Title</strong></p>
+                        <p class="mb-1"><a href="@runbook.Url" target="_blank" rel="noopener">@runbook.Url</a></p>
+                        <small class="text-muted">Last reviewed: @runbook.LastReviewed</small>
+                    }
+                    else
+                    {
+                        <span class="text-muted">No runbook registered.</span>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Raise Incident ─────────────────────────────── -->
+        <div class="col-md-6">
+            <div class="card h-100 shadow-sm border-danger-subtle">
+                <div class="card-header fw-semibold bg-danger bg-opacity-10">🚨 Raise Incident</div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <label class="form-label">Title</label>
+                        <input class="form-control" @bind="incidentReq.Title" placeholder="Short summary of the issue" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" rows="3" @bind="incidentReq.Description" placeholder="Full description…"></textarea>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col">
+                            <label class="form-label">Severity</label>
+                            <select class="form-select" @bind="incidentReq.Severity">
+                                <option value="Low">Low</option>
+                                <option value="Medium">Medium</option>
+                                <option value="High">High</option>
+                                <option value="Critical">Critical</option>
+                            </select>
+                        </div>
+                        <div class="col">
+                            <label class="form-label">Reported By</label>
+                            <input class="form-control" @bind="incidentReq.ReportedBy" placeholder="Your name" />
+                        </div>
+                    </div>
+                    @if (incidentMsg != null)
+                    {
+                        <div class="alert @(incidentMsgIsError ? "alert-danger" : "alert-success") py-2">@incidentMsg</div>
+                    }
+                    <button class="btn btn-danger" @onclick="CreateIncidentAsync" disabled="@creatingIncident">
+                        @if (creatingIncident) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        Raise Incident
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+}
+
+@code {
+    [Parameter] public string SystemId { get; set; } = string.Empty;
+
+    private bool loading = true;
+    private string? loadError;
+
+    private SystemStatus? status;
+    private SystemOwner? owner;
+    private SystemRunbook? runbook;
+
+    private UpdateStatusRequest updateReq = new() { Status = SystemHealthStatus.Green };
+    private bool updatingStatus;
+    private string? statusMsg;
+    private bool statusMsgIsError;
+
+    private CreateIncidentRequest incidentReq = new() { Severity = IncidentSeverity.Medium };
+    private bool creatingIncident;
+    private string? incidentMsg;
+    private bool incidentMsgIsError;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        loading = true;
+        loadError = null;
+        try
+        {
+            var statusTask  = Api.GetStatusAsync(SystemId);
+            var ownerTask   = Api.GetOwnerAsync(SystemId);
+            var runbookTask = Api.GetRunbookAsync(SystemId);
+            await Task.WhenAll(statusTask, ownerTask, runbookTask);
+
+            status  = await statusTask;
+            owner   = await ownerTask;
+            runbook = await runbookTask;
+
+            if (status != null)
+            {
+                updateReq.Status  = status.Status;
+                updateReq.Message = status.Message;
+            }
+        }
+        catch (Exception ex) { loadError = ex.Message; }
+        finally { loading = false; }
+    }
+
+    private async Task UpdateStatusAsync()
+    {
+        updatingStatus = true;
+        statusMsg = null;
+        try
+        {
+            status = await Api.UpdateStatusAsync(SystemId, updateReq);
+            statusMsg = "Status updated successfully.";
+            statusMsgIsError = false;
+        }
+        catch (Exception ex)
+        {
+            statusMsg = $"Error: {ex.Message}";
+            statusMsgIsError = true;
+        }
+        finally { updatingStatus = false; }
+    }
+
+    private async Task CreateIncidentAsync()
+    {
+        creatingIncident = true;
+        incidentMsg = null;
+        try
+        {
+            var inc = await Api.CreateIncidentAsync(SystemId, incidentReq);
+            incidentMsg = $"Incident {inc?.IncidentNumber} created. Go to Incidents to notify the owner.";
+            incidentMsgIsError = false;
+            incidentReq = new() { Severity = IncidentSeverity.Medium };
+        }
+        catch (Exception ex)
+        {
+            incidentMsg = $"Error: {ex.Message}";
+            incidentMsgIsError = true;
+        }
+        finally { creatingIncident = false; }
+    }
+
+    private static string BorderClass(SystemHealthStatus s) => s switch
+    {
+        SystemHealthStatus.Green  => "border-success",
+        SystemHealthStatus.Yellow => "border-warning",
+        SystemHealthStatus.Red    => "border-danger",
+        _                         => ""
+    };
+
+    private static string HeaderClass(SystemHealthStatus s) => s switch
+    {
+        SystemHealthStatus.Green  => "bg-success bg-opacity-10",
+        SystemHealthStatus.Yellow => "bg-warning bg-opacity-10",
+        SystemHealthStatus.Red    => "bg-danger bg-opacity-10",
+        _                         => "bg-light"
+    };
+
+    private static string BadgeClass(SystemHealthStatus s) => s switch
+    {
+        SystemHealthStatus.Green  => "bg-success",
+        SystemHealthStatus.Yellow => "bg-warning text-dark",
+        SystemHealthStatus.Red    => "bg-danger",
+        _                         => "bg-secondary"
+    };
+
+    private static string StatusIcon(SystemHealthStatus s) => s switch
+    {
+        SystemHealthStatus.Green  => "✅",
+        SystemHealthStatus.Yellow => "⚠️",
+        SystemHealthStatus.Red    => "🔴",
+        _                         => "❓"
+    };
+}

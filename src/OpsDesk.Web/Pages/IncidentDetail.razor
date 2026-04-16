@@ -1,0 +1,175 @@
+@page "/incident/{IncidentNumber}"
+@inject ApiClient Api
+@inject NavigationManager Nav
+
+<PageTitle>@IncidentNumber — Ops Center</PageTitle>
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="/incidents">Incidents</a></li>
+        <li class="breadcrumb-item active">@IncidentNumber</li>
+    </ol>
+</nav>
+
+@if (loading)
+{
+    <div class="d-flex align-items-center gap-2">
+        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+        <span>Loading...</span>
+    </div>
+}
+else if (loadError != null)
+{
+    <div class="alert alert-danger">@loadError</div>
+}
+else if (incident != null)
+{
+    <div class="d-flex align-items-center gap-3 mb-4">
+        <h1 class="mb-0"><code>@incident.IncidentNumber</code></h1>
+        <span class="badge @SeverityBadge(incident.Severity) fs-5">@incident.Severity.ToString().ToUpper()</span>
+    </div>
+
+    <div class="row g-4">
+
+        <!-- ── Incident Details ──────────────────────────── -->
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header fw-semibold bg-light">🚨 Incident Details</div>
+                <div class="card-body">
+                    <h5 class="card-title">@incident.Title</h5>
+                    <p class="card-text" style="white-space:pre-wrap">@incident.Description</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Metadata ─────────────────────────────────── -->
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header fw-semibold bg-light">📋 Metadata</div>
+                <div class="card-body p-0">
+                    <table class="table table-sm table-borderless mb-0">
+                        <tr>
+                            <th class="text-muted ps-3">System</th>
+                            <td>
+                                <a href="/system/@incident.SystemId" class="text-decoration-none">
+                                    <span class="badge bg-secondary">@incident.SystemId</span>
+                                </a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted ps-3">Severity</th>
+                            <td><span class="badge @SeverityBadge(incident.Severity)">@incident.Severity.ToString().ToUpper()</span></td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted ps-3">Reported By</th>
+                            <td>@incident.ReportedBy</td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted ps-3">Created</th>
+                            <td><small>@incident.CreatedAt.ToLocalTime().ToString("g")</small></td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted ps-3">System Status</th>
+                            <td><span class="badge @StatusBadge(incident.CurrentStatus)">@incident.CurrentStatus.ToString().ToUpper()</span></td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted ps-3">Status Msg</th>
+                            <td><small>@incident.StatusMessage</small></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Actions ───────────────────────────────────── -->
+        <div class="col-12">
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-primary"
+                        @onclick="NotifyAsync"
+                        disabled="@notifying">
+                    @if (notifying)
+                    { <span class="spinner-border spinner-border-sm me-1"></span> }
+                    📧 Notify Owner
+                </button>
+                <a href="/incidents" class="btn btn-outline-secondary">← Back to Incidents</a>
+            </div>
+
+            @if (notification != null)
+            {
+                <div class="card mt-3 border-primary">
+                    <div class="card-header bg-primary text-white fw-semibold">📧 Notification Sent</div>
+                    <div class="card-body">
+                        <dl class="row mb-2">
+                            <dt class="col-sm-2">To</dt>
+                            <dd class="col-sm-10">@notification.SentTo</dd>
+                            <dt class="col-sm-2">Subject</dt>
+                            <dd class="col-sm-10">@notification.Subject</dd>
+                            <dt class="col-sm-2">Sent At</dt>
+                            <dd class="col-sm-10">@notification.NotifiedAt.ToLocalTime().ToString("g")</dd>
+                        </dl>
+                        <hr />
+                        <pre class="bg-light p-3 rounded" style="white-space:pre-wrap;font-size:.85rem">@notification.Body</pre>
+                    </div>
+                </div>
+            }
+
+            @if (notifyError != null)
+            {
+                <div class="alert alert-danger alert-dismissible mt-3">
+                    @notifyError
+                    <button type="button" class="btn-close" @onclick="() => notifyError = null"></button>
+                </div>
+            }
+        </div>
+
+    </div>
+}
+
+@code {
+    [Parameter] public string IncidentNumber { get; set; } = string.Empty;
+
+    private bool loading = true;
+    private string? loadError;
+    private Incident? incident;
+
+    private bool notifying;
+    private NotificationConfirmation? notification;
+    private string? notifyError;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        loading = true;
+        loadError = null;
+        notification = null;
+        try { incident = await Api.GetIncidentAsync(IncidentNumber); }
+        catch (Exception ex) { loadError = ex.Message; }
+        finally { loading = false; }
+    }
+
+    private async Task NotifyAsync()
+    {
+        notifying = true;
+        notifyError = null;
+        try { notification = await Api.NotifyOwnerAsync(IncidentNumber); }
+        catch (Exception ex) { notifyError = ex.Message; }
+        finally { notifying = false; }
+    }
+
+    private static string SeverityBadge(IncidentSeverity s) => s switch
+    {
+        IncidentSeverity.Critical => "bg-danger",
+        IncidentSeverity.High     => "bg-warning text-dark",
+        IncidentSeverity.Medium   => "bg-primary",
+        IncidentSeverity.Low      => "bg-secondary",
+        _                         => "bg-secondary"
+    };
+
+    private static string StatusBadge(SystemHealthStatus s) => s switch
+    {
+        SystemHealthStatus.Green  => "bg-success",
+        SystemHealthStatus.Yellow => "bg-warning text-dark",
+        SystemHealthStatus.Red    => "bg-danger",
+        _                         => "bg-secondary"
+    };
+}

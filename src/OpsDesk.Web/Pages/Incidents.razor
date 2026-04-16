@@ -1,0 +1,179 @@
+@page "/incidents"
+@inject ApiClient Api
+
+<PageTitle>Incidents — Ops Center</PageTitle>
+
+<h1 class="mb-1">Incidents</h1>
+<p class="text-muted mb-3">All raised incidents across monitored systems</p>
+
+@if (loading)
+{
+    <div class="d-flex align-items-center gap-2">
+        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+        <span>Loading...</span>
+    </div>
+}
+else if (loadError != null)
+{
+    <div class="alert alert-danger">@loadError</div>
+}
+else if (!incidents!.Any())
+{
+    <div class="alert alert-info">No incidents yet. Raise one from the System Detail page.</div>
+}
+else
+{
+    <!-- Filter bar -->
+    <div class="row g-2 mb-3">
+        <div class="col-auto">
+            <select class="form-select form-select-sm" @bind="filterSystem">
+                <option value="">All Systems</option>
+                @foreach (var sys in incidents!.Select(i => i.SystemId).Distinct().OrderBy(x => x))
+                {
+                    <option value="@sys">@sys</option>
+                }
+            </select>
+        </div>
+        <div class="col-auto">
+            <select class="form-select form-select-sm" @bind="filterSeverity">
+                <option value="">All Severities</option>
+                <option value="Critical">Critical</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-outline-secondary btn-sm" @onclick="LoadAsync">🔄 Refresh</button>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Incident #</th>
+                    <th>System</th>
+                    <th>Title</th>
+                    <th>Severity</th>
+                    <th>Reporter</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var inc in Filtered)
+                {
+                    <tr>
+                        <td><a href="/incident/@inc.IncidentNumber" class="text-decoration-none"><code>@inc.IncidentNumber</code></a></td>
+                        <td>
+                            <a href="/system/@inc.SystemId" class="text-decoration-none">
+                                <span class="badge bg-secondary">@inc.SystemId</span>
+                            </a>
+                        </td>
+                        <td>
+                            <div class="fw-semibold">@inc.Title</div>
+                            <small class="text-muted">@inc.Description.Truncate(60)</small>
+                        </td>
+                        <td><span class="badge @SeverityBadge(inc.Severity)">@inc.Severity.ToString().ToUpper()</span></td>
+                        <td>@inc.ReportedBy</td>
+                        <td><small>@inc.CreatedAt.ToLocalTime().ToString("g")</small></td>
+                        <td>
+                            <button class="btn btn-outline-primary btn-sm"
+                                    @onclick="() => NotifyAsync(inc.IncidentNumber)"
+                                    disabled="@(notifying == inc.IncidentNumber)">
+                                @if (notifying == inc.IncidentNumber)
+                                { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                📧 Notify
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+<!-- Notification modal (inline, no JS required) -->
+@if (notification != null)
+{
+    <div class="modal-backdrop fade show" style="z-index:1040"></div>
+    <div class="modal fade show d-block" style="z-index:1050" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">📧 Notification Sent — @notification.IncidentNumber</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="() => notification = null"></button>
+                </div>
+                <div class="modal-body">
+                    <dl class="row mb-2">
+                        <dt class="col-sm-3">To</dt>
+                        <dd class="col-sm-9">@notification.SentTo</dd>
+                        <dt class="col-sm-3">Subject</dt>
+                        <dd class="col-sm-9">@notification.Subject</dd>
+                        <dt class="col-sm-3">Notified At</dt>
+                        <dd class="col-sm-9">@notification.NotifiedAt.ToLocalTime().ToString("g")</dd>
+                    </dl>
+                    <hr />
+                    <pre class="bg-light p-3 rounded" style="white-space:pre-wrap;font-size:.85rem">@notification.Body</pre>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary" @onclick="() => notification = null">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (notifyError != null)
+{
+    <div class="alert alert-danger alert-dismissible mt-3">
+        @notifyError
+        <button type="button" class="btn-close" @onclick="() => notifyError = null"></button>
+    </div>
+}
+
+@code {
+    private List<Incident>? incidents;
+    private string? loadError;
+    private bool loading = true;
+    private string? notifying;
+    private NotificationConfirmation? notification;
+    private string? notifyError;
+
+    private string filterSystem = "";
+    private string filterSeverity = "";
+
+    private IEnumerable<Incident> Filtered => (incidents ?? [])
+        .Where(i => string.IsNullOrEmpty(filterSystem)   || i.SystemId == filterSystem)
+        .Where(i => string.IsNullOrEmpty(filterSeverity) || i.Severity.ToString().Equals(filterSeverity, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        loadError = null;
+        try { incidents = await Api.GetAllIncidentsAsync(); }
+        catch (Exception ex) { loadError = ex.Message; }
+        finally { loading = false; }
+    }
+
+    private async Task NotifyAsync(string incidentNumber)
+    {
+        notifying = incidentNumber;
+        notifyError = null;
+        try { notification = await Api.NotifyOwnerAsync(incidentNumber); }
+        catch (Exception ex) { notifyError = ex.Message; }
+        finally { notifying = null; }
+    }
+
+    private static string SeverityBadge(IncidentSeverity s) => s switch
+    {
+        IncidentSeverity.Critical => "bg-danger",
+        IncidentSeverity.High     => "bg-warning text-dark",
+        IncidentSeverity.Medium   => "bg-primary",
+        IncidentSeverity.Low      => "bg-secondary",
+        _                         => "bg-secondary"
+    };
+}

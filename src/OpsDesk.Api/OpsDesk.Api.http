@@ -1,0 +1,220 @@
+@OpsDesk.Api_HostAddress = http://localhost:5047
+
+# ── Database ──────────────────────────────────────────────────
+
+### Reset database to original seeded state (Development only)
+POST {{OpsDesk.Api_HostAddress}}/database/reset
+
+###
+
+# ── SystemStatus ─────────────────────────────────────────────
+
+### List all system statuses
+GET {{OpsDesk.Api_HostAddress}}/systemstatus
+Accept: application/json
+
+###
+
+### List only red systems
+GET {{OpsDesk.Api_HostAddress}}/systemstatus?status=red
+Accept: application/json
+
+###
+
+### List only yellow systems
+GET {{OpsDesk.Api_HostAddress}}/systemstatus?status=yellow
+Accept: application/json
+
+###
+
+### Get status - payments (green)
+GET {{OpsDesk.Api_HostAddress}}/systemstatus/payments
+Accept: application/json
+
+###
+
+### Get status - auth (yellow)
+GET {{OpsDesk.Api_HostAddress}}/systemstatus/auth
+Accept: application/json
+
+###
+
+### Get status - notifications (green)
+GET {{OpsDesk.Api_HostAddress}}/systemstatus/notifications
+Accept: application/json
+
+###
+
+### Get status - inventory (red)
+GET {{OpsDesk.Api_HostAddress}}/systemstatus/inventory
+Accept: application/json
+
+###
+
+### Get status - reporting (green)
+GET {{OpsDesk.Api_HostAddress}}/systemstatus/reporting
+Accept: application/json
+
+###
+
+### Get status - unknown system (404)
+GET {{OpsDesk.Api_HostAddress}}/systemstatus/unknown
+Accept: application/json
+
+###
+
+### Update status - resolve inventory incident
+POST {{OpsDesk.Api_HostAddress}}/systemstatus/inventory
+Content-Type: application/json
+
+{
+  "status": "green",
+  "message": "Database replication lag resolved. All replicas in sync."
+}
+
+###
+
+### Update status - bad status value (400)
+POST {{OpsDesk.Api_HostAddress}}/systemstatus/payments
+Content-Type: application/json
+
+{
+  "status": "purple",
+  "message": "Invalid status test"
+}
+
+###
+
+# ── SystemOwner ──────────────────────────────────────────────
+
+### List all system owners
+GET {{OpsDesk.Api_HostAddress}}/systemowner
+Accept: application/json
+
+###
+
+### Get owner - payments
+GET {{OpsDesk.Api_HostAddress}}/systemowner/payments
+Accept: application/json
+
+###
+
+### Get owner - auth
+GET {{OpsDesk.Api_HostAddress}}/systemowner/auth
+Accept: application/json
+
+###
+
+### Get owner - notifications
+GET {{OpsDesk.Api_HostAddress}}/systemowner/notifications
+Accept: application/json
+
+###
+
+### Get owner - inventory
+GET {{OpsDesk.Api_HostAddress}}/systemowner/inventory
+Accept: application/json
+
+###
+
+### Get owner - reporting
+GET {{OpsDesk.Api_HostAddress}}/systemowner/reporting
+Accept: application/json
+
+###
+
+### Get owner - unknown system (404)
+GET {{OpsDesk.Api_HostAddress}}/systemowner/unknown
+Accept: application/json
+
+###
+
+# ── Runbook ──────────────────────────────────────────────────
+
+### List all runbooks
+GET {{OpsDesk.Api_HostAddress}}/runbook
+Accept: application/json
+
+###
+
+### Get runbook - payments
+GET {{OpsDesk.Api_HostAddress}}/runbook/payments
+Accept: application/json
+
+###
+
+### Get runbook - auth
+GET {{OpsDesk.Api_HostAddress}}/runbook/auth
+Accept: application/json
+
+###
+
+### Get runbook - notifications
+GET {{OpsDesk.Api_HostAddress}}/runbook/notifications
+Accept: application/json
+
+###
+
+### Get runbook - inventory
+GET {{OpsDesk.Api_HostAddress}}/runbook/inventory
+Accept: application/json
+
+###
+
+### Get runbook - reporting
+GET {{OpsDesk.Api_HostAddress}}/runbook/reporting
+Accept: application/json
+
+###
+
+### Get runbook - unknown system (404)
+GET {{OpsDesk.Api_HostAddress}}/runbook/unknown
+Accept: application/json
+
+###
+
+# ── Incident ─────────────────────────────────────────────────
+
+### Create incident for inventory (step 1 of agent workflow)
+POST {{OpsDesk.Api_HostAddress}}/incident/inventory
+Content-Type: application/json
+
+{
+  "title": "Inventory DB replication lag causing order failures",
+  "description": "Replication lag on inventory-db-02 has exceeded 30s, causing stale reads on the order placement flow. Orders placed in the last 10 minutes may reflect incorrect stock levels.",
+  "severity": "high",
+  "reportedBy": "ops-agent@contoso.com"
+}
+
+###
+
+### Create incident for auth
+POST {{OpsDesk.Api_HostAddress}}/incident/auth
+Content-Type: application/json
+
+{
+  "title": "Elevated latency on token refresh endpoint",
+  "description": "P99 latency on /auth/token/refresh has risen to 4.2s over the last 15 minutes. Users are experiencing intermittent login failures.",
+  "severity": "medium",
+  "reportedBy": "ops-agent@contoso.com"
+}
+
+###
+
+### Notify owner for incident (step 2 of agent workflow — replace INC-00001 with actual number)
+POST {{OpsDesk.Api_HostAddress}}/incident/INC-00001/notify
+
+###
+
+### Create incident for unknown system (404)
+POST {{OpsDesk.Api_HostAddress}}/incident/unknown
+Content-Type: application/json
+
+{
+  "title": "Test",
+  "description": "Test description",
+  "severity": "low",
+  "reportedBy": "ops-agent@contoso.com"
+}
+
+###

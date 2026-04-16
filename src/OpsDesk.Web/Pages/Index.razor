@@ -1,0 +1,115 @@
+﻿@page "/"
+@inject ApiClient Api
+
+<PageTitle>Dashboard — Ops Center</PageTitle>
+
+<h1 class="mb-1">System Health Dashboard</h1>
+<p class="text-muted mb-3">Real-time status of all monitored systems</p>
+
+@if (loading)
+{
+    <div class="d-flex align-items-center gap-2">
+        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+        <span>Loading...</span>
+    </div>
+}
+else if (error != null)
+{
+    <div class="alert alert-danger">@error</div>
+}
+else
+{
+    <!-- Summary bar -->
+    <div class="d-flex gap-3 mb-4">
+        <span class="badge bg-success fs-6 px-3 py-2">✅ @statuses!.Count(s => s.Status == SystemHealthStatus.Green) Healthy</span>
+        <span class="badge bg-warning text-dark fs-6 px-3 py-2">⚠️ @statuses!.Count(s => s.Status == SystemHealthStatus.Yellow) Warning</span>
+        <span class="badge bg-danger fs-6 px-3 py-2">🔴 @statuses!.Count(s => s.Status == SystemHealthStatus.Red) Critical</span>
+    </div>
+
+    <!-- System cards grid -->
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
+        @foreach (var s in statuses!.OrderBy(x => StatusOrder(x.Status)))
+        {
+            <div class="col">
+                <div class="card h-100 border-2 @BorderClass(s.Status) shadow-sm" style="cursor:pointer"
+                     @onclick="() => NavigateTo(s.SystemId)">
+                    <div class="card-header d-flex align-items-center justify-content-between @HeaderClass(s.Status)">
+                        <span class="fw-semibold text-uppercase fs-6">@s.SystemId</span>
+                        <span class="badge @BadgeClass(s.Status) fs-6">@StatusIcon(s.Status) @s.Status.ToString().ToUpper()</span>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">@s.Message</p>
+                        <small class="text-muted">Updated @s.UpdatedAt.ToLocalTime().ToString("g")</small>
+                    </div>
+                    <div class="card-footer bg-transparent border-0 text-end">
+                        <small class="text-primary">View details →</small>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="mt-4 text-end">
+        <button class="btn btn-outline-secondary btn-sm" @onclick="LoadAsync">🔄 Refresh</button>
+    </div>
+}
+
+@code {
+    [Inject] NavigationManager Nav { get; set; } = default!;
+
+    private List<SystemStatus>? statuses;
+    private string? error;
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        error = null;
+        try { statuses = await Api.GetAllStatusesAsync(); }
+        catch (Exception ex) { error = ex.Message; }
+        finally { loading = false; }
+    }
+
+    private void NavigateTo(string systemId) => Nav.NavigateTo($"/system/{systemId}");
+
+    private static int StatusOrder(SystemHealthStatus s) => s switch
+    {
+        SystemHealthStatus.Red    => 0,
+        SystemHealthStatus.Yellow => 1,
+        _                         => 2
+    };
+
+    private static string BorderClass(SystemHealthStatus s) => s switch
+    {
+        SystemHealthStatus.Green  => "border-success",
+        SystemHealthStatus.Yellow => "border-warning",
+        SystemHealthStatus.Red    => "border-danger",
+        _                         => ""
+    };
+
+    private static string HeaderClass(SystemHealthStatus s) => s switch
+    {
+        SystemHealthStatus.Green  => "bg-success bg-opacity-10",
+        SystemHealthStatus.Yellow => "bg-warning bg-opacity-10",
+        SystemHealthStatus.Red    => "bg-danger bg-opacity-10",
+        _                         => ""
+    };
+
+    private static string BadgeClass(SystemHealthStatus s) => s switch
+    {
+        SystemHealthStatus.Green  => "bg-success",
+        SystemHealthStatus.Yellow => "bg-warning text-dark",
+        SystemHealthStatus.Red    => "bg-danger",
+        _                         => "bg-secondary"
+    };
+
+    private static string StatusIcon(SystemHealthStatus s) => s switch
+    {
+        SystemHealthStatus.Green  => "✅",
+        SystemHealthStatus.Yellow => "⚠️",
+        SystemHealthStatus.Red    => "🔴",
+        _                         => "❓"
+    };
+}

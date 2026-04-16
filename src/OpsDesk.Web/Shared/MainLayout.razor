@@ -1,0 +1,64 @@
+@inherits LayoutComponentBase
+@inject ApiClient Api
+
+<PageTitle>OpsDesk</PageTitle>
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4 d-flex align-items-center justify-content-between">
+            <span class="brand-mark">🛡️ <strong>OpsDesk</strong></span>
+            <div class="d-flex align-items-center gap-2">
+            @if (resetResult != null)
+            {
+                <small class="text-success fw-semibold">✅ @resetResult</small>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="() => resetResult = null">✕</button>
+            }
+            else if (resetError != null)
+            {
+                <small class="text-danger fw-semibold">⚠️ @resetError</small>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="() => resetError = null">✕</button>
+            }
+            else if (confirming)
+            {
+                <small class="text-muted">Reset all data?</small>
+                <button class="btn btn-sm btn-danger" @onclick="DoResetAsync" disabled="@resetting">
+                    @if (resetting) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                    Yes, reset
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="() => confirming = false">Cancel</button>
+            }
+            else
+            {
+                <button class="btn btn-sm btn-outline-danger" @onclick="() => confirming = true" title="Reset database to seed data">
+                    🔄 Reset DB
+                </button>
+            }
+            </div>
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+@code {
+    private bool confirming;
+    private bool resetting;
+    private string? resetResult;
+    private string? resetError;
+
+    private async Task DoResetAsync()
+    {
+        resetting = true;
+        resetError = null;
+        confirming = false;
+        try { resetResult = await Api.ResetDatabaseAsync(); }
+        catch (Exception ex) { resetError = ex.Message; }
+        finally { resetting = false; }
+    }
+}

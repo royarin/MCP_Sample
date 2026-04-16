@@ -1,0 +1,71 @@
+@page "/admin"
+@inject ApiClient Api
+
+<PageTitle>Admin — Ops Center</PageTitle>
+
+<h1 class="mb-1">Admin</h1>
+<p class="text-muted mb-3">Developer tools for the demo environment</p>
+
+<div class="card shadow-sm" style="max-width:480px">
+    <div class="card-header fw-semibold bg-danger bg-opacity-10">🗄️ Database Management</div>
+    <div class="card-body">
+        <p class="card-text">
+            Drops the entire database and re-runs all migrations and seed data, 
+            restoring it to the original demo state.
+        </p>
+
+        @if (!confirming && result == null)
+        {
+            <button class="btn btn-outline-danger" @onclick="() => confirming = true">
+                🔄 Reset Database
+            </button>
+        }
+
+        @if (confirming)
+        {
+            <div class="alert alert-warning d-flex align-items-center gap-3">
+                <span>⚠️ This will delete all data. Are you sure?</span>
+                <button class="btn btn-danger btn-sm" @onclick="ResetAsync" disabled="@resetting">
+                    @if (resetting) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                    Yes, Reset
+                </button>
+                <button class="btn btn-secondary btn-sm" @onclick="() => confirming = false">Cancel</button>
+            </div>
+        }
+
+        @if (result != null)
+        {
+            <div class="alert alert-success">
+                ✅ @result
+                <div class="mt-2">
+                    <button class="btn btn-sm btn-outline-success" @onclick="() => { result = null; }">Reset again</button>
+                </div>
+            </div>
+        }
+
+        @if (errorMsg != null)
+        {
+            <div class="alert alert-danger alert-dismissible">
+                @errorMsg
+                <button type="button" class="btn-close" @onclick="() => errorMsg = null"></button>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private bool confirming;
+    private bool resetting;
+    private string? result;
+    private string? errorMsg;
+
+    private async Task ResetAsync()
+    {
+        resetting = true;
+        errorMsg = null;
+        confirming = false;
+        try { result = await Api.ResetDatabaseAsync(); }
+        catch (Exception ex) { errorMsg = ex.Message; }
+        finally { resetting = false; }
+    }
+}
