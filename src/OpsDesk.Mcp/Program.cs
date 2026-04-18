@@ -1,3 +1,4 @@
+using OpsDesk.Mcp.Prompts;
 using OpsDesk.Mcp.Tools;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -9,15 +10,25 @@ builder.Services.AddHttpClient("OpsDesk", client =>
     client.BaseAddress = new Uri(baseUrl);
 });
 
+builder.Services.AddCors();
+
 builder.Services
     .AddMcpServer()
-    .WithHttpTransport()
+    .WithHttpTransport(o => o.Stateless = true)
     .WithTools<SystemStatusTools>()
     .WithTools<SystemOwnerTools>()
     .WithTools<RunbookTools>()
-    .WithTools<IncidentTools>();
+    .WithTools<IncidentTools>()
+    .WithPrompts<IncidentTriagePrompt>();
 
 var app = builder.Build();
+
+app.UseCors(policy =>
+{
+    policy.AllowAnyOrigin()
+          .AllowAnyMethod()
+          .AllowAnyHeader();
+});
 
 app.MapMcp("/mcp");
 
