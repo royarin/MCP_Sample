@@ -437,3 +437,7 @@ FodyWeavers.xsd
 
 # Built Visual Studio Code Extensions
 *.vsix
+
+# ASP.NET Core development appsettings (may contain secrets/local config)
+appsettings.Development.json
+appsettings.*.json
