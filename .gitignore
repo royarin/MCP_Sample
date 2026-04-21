@@ -439,5 +439,4 @@ FodyWeavers.xsd
 *.vsix
 
 # ASP.NET Core development appsettings (may contain secrets/local config)
-appsettings.Development.json
 appsettings.*.json
