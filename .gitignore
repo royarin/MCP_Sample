@@ -440,3 +440,4 @@ FodyWeavers.xsd
 
 # ASP.NET Core development appsettings (may contain secrets/local config)
 appsettings.*.json
+appsettings.[Dd]evelopment.json
