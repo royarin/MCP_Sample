@@ -5,7 +5,8 @@
 //  existing OpsDesk API over HttpClient. Tool calls are traced in the console; CreateIncident asks for
 //  permission first. Then open OpsDeskFunctions.cs and count what is bespoke to this one host.
 //
-//  Config: OpsDesk:BaseUrl (deployed API), AzureOpenAI:* via user-secrets.   --ask "<question>" for one shot.
+//  Config: OpsDesk:BaseUrl and Apim:SubscriptionKey (APIM), Foundry:* in appsettings.Development.json.
+//  --ask "<question>" runs one shot.
 // ─────────────────────────────────────────────────────────────────────────────
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
@@ -17,7 +18,12 @@ using var tracing = Telemetry.Start("opsbot-tools", config);
 
 // The API client – base URL (and any key) are now *this agent's* problem.
 var opsBaseUrl = config["OpsDesk:BaseUrl"] ?? "http://localhost:5047";
-var http = new HttpClient { BaseAddress = new Uri(opsBaseUrl) };
+var baseUri = new Uri(opsBaseUrl.EndsWith('/') ? opsBaseUrl : opsBaseUrl + '/');
+var http = new HttpClient { BaseAddress = baseUri };
+if (config["Apim:SubscriptionKey"] is { Length: > 0 } key)
+    http.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", key);
+else if (baseUri.Host.EndsWith(".azure-api.net", StringComparison.OrdinalIgnoreCase))
+    throw new InvalidOperationException("Apim:SubscriptionKey is required when OpsDesk:BaseUrl points to API Management.");
 var functions = new OpsDeskFunctions(http);
 
 // Hand-wired: one AIFunction per method, bound to this process.
