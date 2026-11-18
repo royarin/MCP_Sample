@@ -2,23 +2,29 @@
 # MCP-server creation in APIM is still portal-driven in many tenants – this script prints the exact steps
 # when the REST call is not available (see apim/README.md). Requires: az CLI (az login), Bicep deployed.
 param(
+  [string]$SubscriptionId = "<subscription-id>",
   [Parameter(Mandatory)][string]$ResourceGroup,
-  [string]$BaseName = "opsdesk-mcp",
+  [string]$BaseName = "<base-name>",
   [Parameter(Mandatory)][string]$TenantId,
   [Parameter(Mandatory)][string]$McpResourceAppId      # app-opsdesk-mcp (api://opsdesk-mcp)
 )
 $ErrorActionPreference = "Stop"
 $apim = "apim-$BaseName"; $apic = "apic-$BaseName"
-$out  = az deployment group show -g $ResourceGroup -n main --query properties.outputs -o json | ConvertFrom-Json
+$outJson = az deployment group show --subscription $SubscriptionId -g $ResourceGroup -n main --query properties.outputs -o json
+if ($LASTEXITCODE) { throw "Could not read the Bicep deployment outputs for '$ResourceGroup'." }
+$out = $outJson | ConvertFrom-Json
 $apiUrl = $out.apiUrl.value; $tasksUrl = $out.mcpTasksUrl.value
 
 Write-Host "1. Import OpsDesk API" -ForegroundColor Cyan
-az apim api import -g $ResourceGroup -n $apim --path opsdesk --api-id opsdesk-api --display-name "OpsDesk API" `
+az apim api import --subscription $SubscriptionId -g $ResourceGroup -n $apim --path opsdesk --api-id opsdesk-api --display-name "OpsDesk API" `
   --specification-format OpenApiJson --specification-url "$apiUrl/openapi/v1.json" --service-url $apiUrl | Out-Null
+if ($LASTEXITCODE) { throw "Could not import the OpsDesk API into '$apim'." }
 
 Write-Host "2. Named values for the policies" -ForegroundColor Cyan
-az apim nv create -g $ResourceGroup -n $apim --named-value-id tenant-id --display-name tenant-id --value $TenantId | Out-Null
-az apim nv create -g $ResourceGroup -n $apim --named-value-id opsdesk-mcp-app-id --display-name opsdesk-mcp-app-id --value $McpResourceAppId | Out-Null
+az apim nv create --subscription $SubscriptionId -g $ResourceGroup -n $apim --named-value-id tenant-id --display-name tenant-id --value $TenantId | Out-Null
+if ($LASTEXITCODE) { throw "Could not create the tenant-id named value in '$apim'." }
+az apim nv create --subscription $SubscriptionId -g $ResourceGroup -n $apim --named-value-id opsdesk-mcp-app-id --display-name opsdesk-mcp-app-id --value $McpResourceAppId | Out-Null
+if ($LASTEXITCODE) { throw "Could not create the MCP app ID named value in '$apim'." }
 
 Write-Host "3. Policies (merged auth + governance for opsdesk-secure)" -ForegroundColor Cyan
 Write-Host "   → open APIM → MCP Servers → opsdesk-secure → Policies and paste apim/policy-mcp-auth.xml inbound first, then apim/policy-mcp-governance.xml."
@@ -29,13 +35,17 @@ Write-Host "   → APIM → APIs → MCP Servers → Create: 'opsdesk-apim' (exp
 Write-Host "   → APIM → APIs → MCP Servers → Create: 'opsdesk-secure' (expose OpsDesk API or pass-through to $tasksUrl), subscription required = off"
 
 Write-Host "5. API Center registration" -ForegroundColor Cyan
-az apic api create -g $ResourceGroup -n $apic --api-id opsdesk-secure --title "OpsDesk MCP (secure)" --type mcp `
-  --custom-properties '{"owner":"Platform Ops","dataClassification":"internal","writeTools":"raise_incident, update_system_status"}' 2>$null
-az apic api version create -g $ResourceGroup -n $apic --api-id opsdesk-secure --version-id v1 --title "1.0" --lifecycle-stage production 2>$null
-az apic environment create -g $ResourceGroup -n $apic --environment-id demo --title "Demo" --type testing 2>$null
-az apic api deployment create -g $ResourceGroup -n $apic --api-id opsdesk-secure --version-id v1 --definition-id openapi `
+az apic api create --subscription $SubscriptionId -g $ResourceGroup -n $apic --api-id opsdesk-secure --title "OpsDesk MCP (secure)" --type mcp `
+  --custom-properties '{"owner":"Platform Ops","dataClassification":"internal","writeTools":"raise_incident, update_system_status"}'
+if ($LASTEXITCODE) { throw "Could not register the secure MCP API in '$apic'." }
+az apic api version create --subscription $SubscriptionId -g $ResourceGroup -n $apic --api-id opsdesk-secure --version-id v1 --title "1.0" --lifecycle-stage production
+if ($LASTEXITCODE) { throw "Could not register the MCP API version in '$apic'." }
+az apic environment create --subscription $SubscriptionId -g $ResourceGroup -n $apic --environment-id demo --title "Demo" --type testing
+if ($LASTEXITCODE) { throw "Could not register the demo environment in '$apic'." }
+az apic api deployment create --subscription $SubscriptionId -g $ResourceGroup -n $apic --api-id opsdesk-secure --version-id v1 --definition-id openapi `
   --deployment-id apim --title "APIM gateway" --environment-id /workspaces/default/environments/demo `
-  --server "{\"runtimeUri\":[\"$($out.apimGateway.value)/opsdesk-secure/mcp\"]}" 2>$null
+  --server "{\"runtimeUri\":[\"$($out.apimGateway.value)/opsdesk-secure/mcp\"]}"
+if ($LASTEXITCODE) { throw "Could not register the APIM deployment in '$apic'." }
 
 Write-Host "6. Diagnostics" -ForegroundColor Cyan
 Write-Host "   → APIM → APIs → OpsDesk API → Settings → Diagnostics: App Insights logger 'appinsights', sampling 100 %, correlation W3C."
