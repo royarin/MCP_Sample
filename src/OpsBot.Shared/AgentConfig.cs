@@ -29,12 +29,19 @@ public static class AgentConfig
     {
         var endpoint = c["Foundry:ProjectEndpoint"] ?? throw new InvalidOperationException(
             "Foundry:ProjectEndpoint is not configured in appsettings.Development.json.");
-        var projectOpenAI = new ProjectOpenAIClient(new Uri(endpoint), CreateCredential());
+        TokenCredential credential = c["Foundry:Credential"] switch
+        {
+            null or "DefaultAzureCredential" => CreateCredential(),
+            "AzureCliCredential" => new AzureCliCredential(),
+            _ => throw new InvalidOperationException(
+                "Foundry:Credential must be DefaultAzureCredential or AzureCliCredential.")
+        };
+        var projectOpenAI = new ProjectOpenAIClient(new Uri(endpoint), credential);
         // The Foundry project Responses API remains explicitly evaluation-only in the current SDK.
 #pragma warning disable AAIP002, OPENAI001
         IChatClient inner = projectOpenAI
             .GetProjectResponsesClientForModel(Deployment(c))
-            .AsIChatClient();
+            .AsIChatClient(Deployment(c));
 #pragma warning restore AAIP002, OPENAI001
         return new ToolTraceChatClient(inner, meter);
     }

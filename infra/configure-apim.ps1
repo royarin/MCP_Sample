@@ -177,7 +177,7 @@ if ($LASTEXITCODE -ne 0) { throw "Could not retrieve the demo subscription key f
 $subscriptionKey = ($secretsJson | ConvertFrom-Json).primaryKey
 if ([string]::IsNullOrWhiteSpace($subscriptionKey)) { throw "APIM returned an empty primary subscription key." }
 
-$foundry = @{ ProjectEndpoint = $FoundryProjectEndpoint; DeploymentName = $FoundryDeploymentName }
+$foundry = @{ ProjectEndpoint = $FoundryProjectEndpoint; DeploymentName = $FoundryDeploymentName; Credential = "AzureCliCredential" }
 Set-LocalSettings "src\OpsBot.NoTools\appsettings.Development.json" @{ Foundry = $foundry }
 Set-LocalSettings "src\OpsBot.Tools\appsettings.Development.json" @{
   Foundry = $foundry
