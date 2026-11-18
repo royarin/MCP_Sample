@@ -37,26 +37,20 @@ Headline question (seed data: `inventory` is **Red**):
 ## Getting started
 
 ```bash
-# prerequisites: .NET 10 SDK, an Azure OpenAI deployment (gpt-4o), optional: VS Code + Copilot, Node for MCP Inspector
+# prerequisites: .NET 10 SDK, Azure CLI signed into the Foundry project tenant,
+# a model deployed to the Foundry project, optional VS Code + Copilot and Node for MCP Inspector
+az login --tenant <tenant-id>
+.\infra\configure-apim.ps1
 dotnet build MCP_Sample.slnx
-
-# secrets are shared by OpsBot.* (user-secrets id opsdesk-mcp-demos) – run from any OpsBot project folder
-cd src/OpsBot.Mcp
-dotnet user-secrets set AzureOpenAI:Endpoint       https://<resource>.openai.azure.com/
-dotnet user-secrets set AzureOpenAI:ApiKey         <key>          # omit to use az login
-dotnet user-secrets set AzureOpenAI:DeploymentName gpt-4o
-dotnet user-secrets set OpsDesk:BaseUrl            https://app-<base-name>-api.azurewebsites.net   # or http://localhost:5047
-dotnet user-secrets set Mcp:Endpoint               https://app-<base-name>-mcp.azurewebsites.net/mcp
 ```
 
-Run locally (one terminal each): `OpsDesk.Api` (:5047), `OpsDesk.Web`, `OpsDesk.Mcp` (:5001), `OpsDesk.Mcp.Tasks` (:5002).
-For the session everything server-side is deployed to Azure (`infra/`) and only the console agents run on the laptop.
+`configure-apim.ps1` writes the APIM subscription key and endpoints to ignored, local `appsettings.Development.json` files for the three calling console projects. It never prints the key. Each file also contains the Foundry project endpoint and model deployment name; ensure the deployment name matches a model deployed in `rg-foundry-gen`. The agent hosts run locally; the API and MCP servers stay deployed.
 
 ```bash
 dotnet run --project src/OpsBot.NoTools -- --ask "What's wrong with inventory, who do I call, is there a runbook, and is anything open on it?"
 dotnet run --project src/OpsBot.Tools   -- --ask "..."
 dotnet run --project src/OpsBot.Mcp     -- --ask "..."                                    # Mcp:Endpoint from config
-dotnet run --project src/OpsBot.Mcp     -- --compare http://localhost:5001/mcp http://localhost:5002/mcp --ask "..."
+dotnet run --project src/OpsBot.Mcp     -- --compare <opsdesk-code-apim-url> <opsdesk-tasks-apim-url> --ask "..."
 dotnet run --project src/OpsBot.Mcp     -- --Mcp:Endpoint https://<apim>/opsdesk-secure/mcp --Mcp:Auth entra
 ```
 

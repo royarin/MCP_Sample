@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Azure.Core;
-using Azure.Identity;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using ModelContextProtocol.Client;
@@ -20,9 +19,12 @@ public static class McpConnection
     public static async Task<Connected> ConnectAsync(string endpoint, IConfiguration config, CancellationToken ct = default)
     {
         var headers = new Dictionary<string, string>();
+        var endpointUri = new Uri(endpoint);
 
         if (config["Mcp:ApimSubscriptionKey"] is { Length: > 0 } key)
             headers["Ocp-Apim-Subscription-Key"] = key;
+        else if (endpointUri.Host.EndsWith(".azure-api.net", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Mcp:ApimSubscriptionKey is required when Mcp:Endpoint points to API Management.");
 
         if (string.Equals(config["Mcp:Auth"], "entra", StringComparison.OrdinalIgnoreCase))
             headers["Authorization"] = "Bearer " + await AcquireTokenAsync(config, ct);
@@ -30,7 +32,7 @@ public static class McpConnection
         // ModelContextProtocol 1.x: HttpClientTransport speaks Streamable HTTP (falls back to legacy SSE).
         var transport = new HttpClientTransport(new HttpClientTransportOptions
         {
-            Endpoint = new Uri(endpoint),
+            Endpoint = endpointUri,
             Name = "opsdesk",
             AdditionalHeaders = headers,
         });
@@ -42,7 +44,7 @@ public static class McpConnection
         IList<AITool> tools = [.. mcpTools];                              // McpClientTool : AIFunction
 
         var (count, tokens) = ToolCatalogMeter.Measure(tools, AgentConfig.Deployment(config));
-        var name = client.ServerInfo?.Name ?? new Uri(endpoint).Host;
+        var name = client.ServerInfo?.Name ?? endpointUri.Host;
         Ui.Info($"connected to {endpoint}");
         Ui.Info($"discovered {count} tool(s) from '{name}' · {tokens:N0} tokens of tool definitions sent on every model call");
         return new Connected(client, tools, name, count, tokens);
@@ -52,9 +54,9 @@ public static class McpConnection
     {
         var e = config.GetSection("Mcp:Entra");
         var scope = e["Scope"] ?? "api://opsdesk-mcp/.default";
-        TokenCredential credential = e["ClientSecret"] is { Length: > 0 } secret
-            ? new ClientSecretCredential(e["TenantId"], e["ClientId"], secret)   // service agent (Demo 4)
-            : new DefaultAzureCredential();                                      // az login – a user's delegated token
+        var role = e["Role"] ?? "Reader";
+        var identity = e.GetSection("Identities").GetSection(role);
+        TokenCredential credential = AgentConfig.CreateCredential(e["TenantId"], identity["ClientId"], identity["ClientSecret"]);
         var token = await credential.GetTokenAsync(new TokenRequestContext([scope]), ct);
 
         var claims = DecodeJwtPayload(token.Token);

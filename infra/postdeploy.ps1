@@ -32,7 +32,8 @@ Write-Host "   (The MCP-server policy scope has no stable CLI yet; the API-scope
 
 Write-Host "4. MCP servers" -ForegroundColor Cyan
 Write-Host "   → APIM → APIs → MCP Servers → Create: 'opsdesk-apim' (expose OpsDesk API, all operations, product demo-open)"
-Write-Host "   → APIM → APIs → MCP Servers → Create: 'opsdesk-secure' (expose OpsDesk API or pass-through to $tasksUrl), subscription required = off"
+Write-Host "   → Run infra/configure-apim.ps1 for the key-protected API and passthrough MCP routes."
+Write-Host "   → APIM → APIs → MCP Servers → Create: 'opsdesk-secure' (pass-through to $tasksUrl), subscription required = on; then apply Entra and governance policies."
 
 Write-Host "5. API Center registration" -ForegroundColor Cyan
 az apic api create --subscription $SubscriptionId -g $ResourceGroup -n $apic --api-id opsdesk-secure --title "OpsDesk MCP (secure)" --type mcp `
@@ -50,11 +51,9 @@ if ($LASTEXITCODE) { throw "Could not register the APIM deployment in '$apic'." 
 Write-Host "6. Diagnostics" -ForegroundColor Cyan
 Write-Host "   → APIM → APIs → OpsDesk API → Settings → Diagnostics: App Insights logger 'appinsights', sampling 100 %, correlation W3C."
 
-Write-Host "`nLaptop configuration (run from any OpsBot.* project folder – secrets are shared):" -ForegroundColor Green
+Write-Host "`nLocal configuration (use appsettings.Development.json; never commit subscription keys or credentials):" -ForegroundColor Green
 @"
-dotnet user-secrets set OpsDesk:BaseUrl $apiUrl
-dotnet user-secrets set Mcp:Endpoint $($out.mcpUrl.value)
-dotnet user-secrets set APPLICATIONINSIGHTS_CONNECTION_STRING "$($out.appInsightsConnectionString.value)"
-dotnet user-secrets set Mcp:Entra:TenantId $TenantId
-# plus AzureOpenAI:Endpoint / ApiKey / DeploymentName and Mcp:Entra:ClientId / ClientSecret (see infra/entra.md)
+Run infra/configure-apim.ps1 to populate the local APIM URLs and subscription key.
+Set Foundry:ProjectEndpoint and Foundry:DeploymentName in each local agent appsettings.Development.json.
+Set Mcp:Entra identities in src/OpsBot.Mcp/appsettings.Development.json (see infra/entra.md).
 "@

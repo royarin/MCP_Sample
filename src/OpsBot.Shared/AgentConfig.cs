@@ -1,6 +1,8 @@
-using Azure;
-using Azure.AI.OpenAI;
-using Azure.Identity;
+extern alias AzureIdentity;
+
+using Azure.AI.Extensions.OpenAI;
+using Azure.AI.Projects;
+using Azure.Core;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 
@@ -13,7 +15,7 @@ public static class AgentConfig
 
     /// <summary>appsettings.json → appsettings.Development.json → user-secrets → env → --Key=value / --ask "...".</summary>
     public static IConfigurationRoot Build(string[] args) => new ConfigurationBuilder()
-        .SetBasePath(Directory.GetCurrentDirectory())
+        .SetBasePath(AppContext.BaseDirectory)
         .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
         .AddJsonFile("appsettings.Development.json", optional: true, reloadOnChange: false)
         .AddUserSecrets(UserSecretsId, reloadOnChange: false)
@@ -21,21 +23,33 @@ public static class AgentConfig
         .AddCommandLine(args)
         .Build();
 
-    public static string Deployment(IConfiguration c) => c["AzureOpenAI:DeploymentName"] ?? c["AzureOpenAI:Deployment"] ?? "gpt-4o";
+    public static string Deployment(IConfiguration c) =>
+        c["Foundry:DeploymentName"] ?? c["AzureOpenAI:DeploymentName"] ?? c["AzureOpenAI:Deployment"] ?? "gpt-4o";
 
-    /// <summary>Azure OpenAI chat client wrapped in <see cref="ToolTraceChatClient"/>.</summary>
+    /// <summary>Foundry project chat client wrapped in <see cref="ToolTraceChatClient"/>.</summary>
     public static IChatClient CreateChatClient(IConfiguration c, UsageMeter meter)
     {
-        var endpoint = c["AzureOpenAI:Endpoint"] ?? throw new InvalidOperationException(
-            "AzureOpenAI:Endpoint not configured. Run: dotnet user-secrets set AzureOpenAI:Endpoint https://<resource>.openai.azure.com/");
-        var apiKey = c["AzureOpenAI:ApiKey"];
-
-        AzureOpenAIClient azure = string.IsNullOrWhiteSpace(apiKey)
-            ? new AzureOpenAIClient(new Uri(endpoint), new DefaultAzureCredential())      // az login
-            : new AzureOpenAIClient(new Uri(endpoint), new AzureKeyCredential(apiKey));
-
-        IChatClient inner = azure.GetChatClient(Deployment(c)).AsIChatClient();
+        var endpoint = c["Foundry:ProjectEndpoint"] ?? throw new InvalidOperationException(
+            "Foundry:ProjectEndpoint is not configured in appsettings.Development.json.");
+        var project = new AIProjectClient(new Uri(endpoint), CreateCredential());
+        IChatClient inner = project.GetProjectOpenAIClient()
+            .GetProjectResponsesClientForModel(Deployment(c))
+            .AsIChatClient();
         return new ToolTraceChatClient(inner, meter);
+    }
+
+    public static TokenCredential CreateCredential(
+        string? tenantId = null,
+        string? clientId = null,
+        string? clientSecret = null)
+    {
+        if (string.IsNullOrWhiteSpace(clientSecret))
+            return new AzureIdentity::Azure.Identity.DefaultAzureCredential();
+
+        if (string.IsNullOrWhiteSpace(tenantId) || string.IsNullOrWhiteSpace(clientId))
+            throw new InvalidOperationException("Mcp:Entra:TenantId and Mcp:Entra:ClientId are required with Mcp:Entra:ClientSecret.");
+
+        return new AzureIdentity::Azure.Identity.ClientSecretCredential(tenantId, clientId, clientSecret);
     }
 
     public static PermissionGate.Mode PermissionMode(IConfiguration c) =>

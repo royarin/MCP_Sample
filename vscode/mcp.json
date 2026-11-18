@@ -1,12 +1,17 @@
 {
   "//": "Copy to .vscode/mcp.json. Replace the <...> hosts with the deployed URLs (scripts/urls.ps1). Enable one server at a time during the demo.",
   "servers": {
-    "opsdesk-code":   { "type": "http", "url": "https://app-<base-name>-mcp.azurewebsites.net/mcp" },
-    "opsdesk-tasks":  { "type": "http", "url": "https://app-<base-name>-mcp-tasks.azurewebsites.net/mcp" },
+    "opsdesk-code":   { "type": "http", "url": "https://<apim-name>.azure-api.net/opsdesk-code/mcp",
+                        "headers": { "Ocp-Apim-Subscription-Key": "${input:apimKey}" } },
+    "opsdesk-tasks":  { "type": "http", "url": "https://<apim-name>.azure-api.net/opsdesk-tasks/mcp",
+                        "headers": { "Ocp-Apim-Subscription-Key": "${input:apimKey}" } },
     "opsdesk-apim":   { "type": "http", "url": "https://<apim-name>.azure-api.net/opsdesk-apim/mcp",
                         "headers": { "Ocp-Apim-Subscription-Key": "${input:apimKey}" } },
     "opsdesk-secure": { "type": "http", "url": "https://<apim-name>.azure-api.net/opsdesk-secure/mcp",
-                        "headers": { "Authorization": "Bearer ${input:token}" } }
+                        "headers": {
+                          "Ocp-Apim-Subscription-Key": "${input:apimKey}",
+                          "Authorization": "Bearer ${input:token}"
+                        } }
   },
   "inputs": [
     { "id": "apimKey", "type": "promptString", "password": true, "description": "APIM subscription key (product demo-open)" },

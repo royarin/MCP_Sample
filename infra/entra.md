@@ -34,14 +34,8 @@ Portal → each agent app → **API permissions → Add → My APIs → app-opsd
 Assign `Ops.Reader` to `opsdesk.reader@<tenant>` and `Ops.Operator` to `opsdesk.operator@<tenant>` under
 **Enterprise applications → app-opsdesk-mcp → Users and groups**. Tokens: `scripts/tokens.ps1`.
 
-## 4. Laptop secrets
+## 4. Local agent configuration
 
-```bash
-cd src/OpsBot.Mcp
-dotnet user-secrets set Mcp:Entra:TenantId     <tenant-guid>
-dotnet user-secrets set Mcp:Entra:ClientId     <opsdesk-agent-reader appId>
-dotnet user-secrets set Mcp:Entra:ClientSecret <secret>
-dotnet user-secrets set Mcp:Entra:Scope        api://opsdesk-mcp/.default
-```
+Set `Mcp:Entra:TenantId`, `Scope`, and the `Identities.Reader` and `Identities.Operator` client IDs/secrets in the ignored `src/OpsBot.Mcp/appsettings.Development.json`. Set `Mcp:Entra:Role` to `Reader` or `Operator` for the selected run. The Demo 4 script reads these values locally and never prints or passes secrets on its command line.
 
-Operator identity for the positive case: pass `--Mcp:Entra:ClientId … --Mcp:Entra:ClientSecret …` on the command line (`scripts/demo4.ps1 -Operator`).
+All calls still include the APIM product subscription key; the JWT supplies the caller identity and role.

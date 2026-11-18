@@ -9,7 +9,7 @@
 //    dotnet run -- --Mcp:Endpoint https://<apim>/opsdesk-secure/mcp --Mcp:Auth entra                     (Demo 4)
 //
 //  Flags: --permissions ask|auto (default ask → y/n/always prompt before write tools)
-//  Config: AzureOpenAI:*, Mcp:Endpoint, Mcp:ApimSubscriptionKey, Mcp:Auth, Mcp:Entra:{TenantId,ClientId,ClientSecret,Scope}
+//  Config: Foundry:*, Mcp:Endpoint, Mcp:ApimSubscriptionKey, Mcp:Auth, Mcp:Entra
 // ─────────────────────────────────────────────────────────────────────────────
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
