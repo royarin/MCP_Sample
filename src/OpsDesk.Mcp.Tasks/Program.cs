@@ -12,6 +12,7 @@ using Azure.Monitor.OpenTelemetry.AspNetCore;
 using ModelContextProtocol.Protocol;
 using OpenTelemetry;
 using OpenTelemetry.Trace;
+using OpsDesk.Mcp.Tasks;
 using OpsDesk.Mcp.Tasks.Tools;
 
 var builder = WebApplication.CreateBuilder(args);
