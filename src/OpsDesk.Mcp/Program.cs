@@ -1,3 +1,13 @@
+// ─────────────────────────────────────────────────────────────────────────────
+//  OpsDesk.Mcp · Demo 2a / Demo 3 (endpoint-shaped side)
+//
+//  A thin MCP façade over the existing OpsDesk API: one tool per API operation, API summaries as
+//  descriptions, raw JSON results. Correct, discoverable – and the baseline Demo 3 measures against.
+//  The tools are deliberately left as they were; the task-shaped alternative lives in OpsDesk.Mcp.Tasks.
+// ─────────────────────────────────────────────────────────────────────────────
+using Azure.Monitor.OpenTelemetry.AspNetCore;
+using OpenTelemetry;
+using OpenTelemetry.Trace;
 using OpsDesk.Mcp.Prompts;
 using OpsDesk.Mcp.Tools;
 
@@ -21,6 +31,12 @@ builder.Services
     .WithTools<IncidentTools>()
     .WithPrompts<IncidentTriagePrompt>();
 
+// Traces → Application Insights when APPLICATIONINSIGHTS_CONNECTION_STRING is set (Demo 4 observability).
+if (!string.IsNullOrWhiteSpace(builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]))
+    builder.Services.AddOpenTelemetry()
+        .UseAzureMonitor()
+        .WithTracing(t => t.AddSource("Experimental.ModelContextProtocol"));   // MCP SDK spans (tools/call etc.)
+
 var app = builder.Build();
 
 app.UseCors(policy =>
@@ -31,5 +47,6 @@ app.UseCors(policy =>
 });
 
 app.MapMcp("/mcp");
+app.MapGet("/health", () => Results.Ok(new { status = "ok", server = "opsdesk-mcp", style = "endpoint-shaped" }));
 
 app.Run();
