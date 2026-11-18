@@ -26,6 +26,33 @@ function Invoke-AzRestPut([string]$Uri, [object]$Body) {
   if ($exitCode -ne 0) { throw "APIM update failed: $Uri" }
 }
 
+function Set-McpPassthroughServer([hashtable]$Server) {
+  $backendId = "$($Server.Id)-backend"
+  Invoke-AzRestPut "$baseUrl/backends/${backendId}?api-version=$apiVersion" @{
+    properties = @{
+      protocol = "http"
+      title = "$($Server.Name) backend"
+      url = $Server.Backend.TrimEnd("/")
+    }
+  }
+
+  Invoke-AzRestPut "$baseUrl/apis/$($Server.Id)?api-version=$apiVersion" @{
+    properties = @{
+      type = "mcp"
+      displayName = $Server.Name
+      description = "Streamable HTTP passthrough to the deployed OpsDesk MCP server."
+      path = $Server.Path
+      protocols = @("https")
+      backendId = $backendId
+      serviceUrl = $null
+      subscriptionRequired = $true
+      mcpProperties = @{
+        endpoints = @{ mcp = @{ uriTemplate = "/mcp" } }
+      }
+    }
+  }
+}
+
 function Set-LocalSettings([string]$RelativePath, [object]$Settings) {
   $path = Join-Path $repoRoot $RelativePath
   $json = $Settings | ConvertTo-Json -Depth 10
@@ -91,22 +118,7 @@ $servers = @(
 )
 
 foreach ($server in $servers) {
-  $body = @{
-    properties = @{
-      type = "mcp"
-      displayName = $server.Name
-      description = "Streamable HTTP passthrough to the deployed OpsDesk MCP server."
-      path = $server.Path
-      protocols = @("https")
-      serviceUrl = $server.Backend.TrimEnd("/")
-      subscriptionRequired = $true
-      mcpProperties = @{
-        transportType = "streamable"
-        endpoints = @{ message = @{ uriTemplate = "/mcp" } }
-      }
-    }
-  }
-  Invoke-AzRestPut "$baseUrl/apis/$($server.Id)?api-version=$apiVersion" $body
+  Set-McpPassthroughServer $server
 
   $productBinding = az apim product api check -g $ResourceGroup -n $ApimName --product-id demo-open --api-id $server.Id -o tsv 2>$null
   if ($LASTEXITCODE -ne 0 -or $productBinding -ne "true") {
