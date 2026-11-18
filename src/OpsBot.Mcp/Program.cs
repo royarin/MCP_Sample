@@ -12,6 +12,7 @@
 //  Config: AzureOpenAI:*, Mcp:Endpoint, Mcp:ApimSubscriptionKey, Mcp:Auth, Mcp:Entra:{TenantId,ClientId,ClientSecret,Scope}
 // ─────────────────────────────────────────────────────────────────────────────
 using Microsoft.Agents.AI;
+using Microsoft.Extensions.AI;
 using OpsBot.Mcp;
 using OpsBot.Shared;
 

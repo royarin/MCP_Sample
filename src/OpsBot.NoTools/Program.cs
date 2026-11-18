@@ -7,6 +7,7 @@
 //  dotnet run -- --ask "<question>"      one-shot (used by scripts/demo1.ps1)
 // ─────────────────────────────────────────────────────────────────────────────
 using Microsoft.Agents.AI;
+using Microsoft.Extensions.AI;
 using OpsBot.Shared;
 
 var config = AgentConfig.Build(args);
