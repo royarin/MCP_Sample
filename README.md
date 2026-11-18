@@ -59,8 +59,17 @@ dotnet run --project src/OpsBot.Mcp     -- --Mcp:Endpoint https://<apim>/opsdesk
 
 Flags: `--ask "<question>"` one shot · `--permissions ask|auto` (default `ask`: write tools prompt `[y]es / [n]o / [a]lways`) · `--compare <a> <b>`.
 
+### Demo 2 in VS Code
+
+Open this repository folder in VS Code; `.vscode/mcp.json` defines the two Azure-hosted Demo 2 servers. No local server or file copying is required. Start `opsdesk-code` from the configuration file or **MCP: List Servers**, approve the server trust prompt, and enter your APIM service name and `demo-open` subscription key when prompted. The key is a password input, not a value to save in this repository.
+
+In Copilot Chat's agent mode, enable only that server's tools and ask the headline inventory question above. Inspect the tool calls, then ask: **"Raise a Critical incident for inventory - replication lag over threshold - reported by Arin, and notify the owner."** Review and approve the write-tool call, then check the dashboard. Disable those tools and enable `opsdesk-apim` to repeat the briefing using the API-generated tools. Use one server at a time so Copilot cannot mix the two implementations.
+
+This file uses VS Code's editor-managed MCP input prompts. On builds that distinguish the **Local** and **Copilot** session targets, use **Local**: the newer Copilot harness does not forward definitions containing `${input:...}`. The templates in `vscode/` remain available for the other demos.
+
 ## Folders
 
+- `.vscode/` – workspace-discovered `mcp.json` for Demo 2; prompts for the APIM name and subscription key
 - `apim/` – click-path for *Expose API as MCP server*, `policy-backend.xml`, `policy-mcp-auth.xml`, `policy-mcp-governance.xml`
 - `infra/` – `main.bicep` (Linux App Service ×4, APIM, API Center, paired Log Analytics/App Insights), `deploy-apps.ps1`, `postdeploy.ps1`, `entra.md`
 - `vscode/` – `mcp.json` (Azure endpoints: `opsdesk-code`, `opsdesk-tasks`, `opsdesk-apim`, `opsdesk-secure`), `mcp.local.json`

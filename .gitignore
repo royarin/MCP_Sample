@@ -434,6 +434,7 @@ FodyWeavers.xsd
 !.vscode/extensions.json
 !.vscode/*.code-snippets
 !*.code-workspace
+!.vscode/mcp.json
 
 # Built Visual Studio Code Extensions
 *.vsix
