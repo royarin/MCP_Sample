@@ -441,3 +441,14 @@ FodyWeavers.xsd
 # ASP.NET Core development appsettings (may contain secrets/local config)
 appsettings.*.json
 appsettings.[Dd]evelopment.json
+
+# --- Builders Foundry London additions ---
+# SQLite database created by OpsDesk.Api on first run
+*.db
+*.db-shm
+*.db-wal
+# Visual Studio connected-services artefacts (contain subscription/resource ids)
+**/Properties/ServiceDependencies/
+**/Properties/serviceDependencies*.json
+# local demo recordings
+fallback/*.mp4
