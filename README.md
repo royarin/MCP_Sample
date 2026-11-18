@@ -47,6 +47,8 @@ dotnet build MCP_Sample.slnx
 
 `configure-apim.ps1` writes the APIM subscription key and endpoints to ignored, local `appsettings.Development.json` files for the three calling console projects. It never prints the key. Supply your Foundry project endpoint and model deployment name; ensure the deployment exists in that project. The agent hosts run locally; the API and MCP servers stay deployed.
 
+The script sets `Foundry:Credential` to `AzureCliCredential` so the local agents use the Azure CLI login above. For existing local settings, add `"Credential": "AzureCliCredential"` inside `Foundry` in each console project's `appsettings.Development.json`. Without this setting, `DefaultAzureCredential` may select a different cached IDE identity or tenant, causing Foundry to return `Workspace not found` even for a valid project endpoint. Use `DefaultAzureCredential` explicitly when its credential chain is intended.
+
 ```bash
 dotnet run --project src/OpsBot.NoTools -- --ask "What's wrong with inventory, who do I call, is there a runbook, and is anything open on it?"
 dotnet run --project src/OpsBot.Tools   -- --ask "..."
