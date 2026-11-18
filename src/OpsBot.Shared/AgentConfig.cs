@@ -1,8 +1,7 @@
-extern alias AzureIdentity;
-
 using Azure.AI.Extensions.OpenAI;
 using Azure.AI.Projects;
 using Azure.Core;
+using Azure.Identity;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 
@@ -32,9 +31,12 @@ public static class AgentConfig
         var endpoint = c["Foundry:ProjectEndpoint"] ?? throw new InvalidOperationException(
             "Foundry:ProjectEndpoint is not configured in appsettings.Development.json.");
         var project = new AIProjectClient(new Uri(endpoint), CreateCredential());
+        // The Foundry project Responses API remains explicitly evaluation-only in the current SDK.
+#pragma warning disable AAIP002, OPENAI001
         IChatClient inner = project.GetProjectOpenAIClient()
             .GetProjectResponsesClientForModel(Deployment(c))
             .AsIChatClient();
+#pragma warning restore AAIP002, OPENAI001
         return new ToolTraceChatClient(inner, meter);
     }
 
@@ -44,12 +46,12 @@ public static class AgentConfig
         string? clientSecret = null)
     {
         if (string.IsNullOrWhiteSpace(clientSecret))
-            return new AzureIdentity::Azure.Identity.DefaultAzureCredential();
+            return new DefaultAzureCredential();
 
         if (string.IsNullOrWhiteSpace(tenantId) || string.IsNullOrWhiteSpace(clientId))
             throw new InvalidOperationException("Mcp:Entra:TenantId and Mcp:Entra:ClientId are required with Mcp:Entra:ClientSecret.");
 
-        return new AzureIdentity::Azure.Identity.ClientSecretCredential(tenantId, clientId, clientSecret);
+        return new ClientSecretCredential(tenantId, clientId, clientSecret);
     }
 
     public static PermissionGate.Mode PermissionMode(IConfiguration c) =>
