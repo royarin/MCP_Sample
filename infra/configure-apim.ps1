@@ -1,17 +1,18 @@
 param(
-  [string]$SubscriptionId = "<subscription-id>",
-  [string]$ResourceGroup = "<resource-group>",
-  [string]$ApimName = "<apim-name>",
-  [string]$ApiUrl = "https://app-<base-name>-api.azurewebsites.net",
-  [string]$McpCodeUrl = "https://app-<base-name>-mcp.azurewebsites.net",
-  [string]$McpTasksUrl = "https://app-<base-name>-mcp-tasks.azurewebsites.net",
-  [string]$FoundryProjectEndpoint = "<foundry-project-endpoint>",
+  [Parameter(Mandatory)][string]$SubscriptionId,
+  [Parameter(Mandatory)][string]$ResourceGroup,
+  [Parameter(Mandatory)][string]$BaseName,
+  [Parameter(Mandatory)][string]$FoundryProjectEndpoint,
   [string]$FoundryDeploymentName = "gpt-4o"
 )
 
 $ErrorActionPreference = "Stop"
 $apiVersion = "2025-09-01-preview"
 $subscriptionApiVersion = "2022-08-01"
+$ApimName = "apim-$BaseName"
+$ApiUrl = "https://app-$BaseName-api.azurewebsites.net"
+$McpCodeUrl = "https://app-$BaseName-mcp.azurewebsites.net"
+$McpTasksUrl = "https://app-$BaseName-mcp-tasks.azurewebsites.net"
 $baseUrl = "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroup/providers/Microsoft.ApiManagement/service/$ApimName"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 

@@ -2,9 +2,9 @@
 # MCP-server creation in APIM is still portal-driven in many tenants – this script prints the exact steps
 # when the REST call is not available (see apim/README.md). Requires: az CLI (az login), Bicep deployed.
 param(
-  [string]$SubscriptionId = "<subscription-id>",
+  [Parameter(Mandatory)][string]$SubscriptionId,
   [Parameter(Mandatory)][string]$ResourceGroup,
-  [string]$BaseName = "<base-name>",
+  [Parameter(Mandatory)][string]$BaseName,
   [Parameter(Mandatory)][string]$TenantId,
   [Parameter(Mandatory)][string]$McpResourceAppId      # app-opsdesk-mcp (api://opsdesk-mcp)
 )

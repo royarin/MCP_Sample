@@ -36,15 +36,16 @@ Headline question (seed data: `inventory` is **Red**):
 
 ## Getting started
 
-```bash
+```powershell
 # prerequisites: .NET 10 SDK, Azure CLI signed into the Foundry project tenant,
 # a model deployed to the Foundry project, optional VS Code + Copilot and Node for MCP Inspector
-az login --tenant <tenant-id>
-.\infra\configure-apim.ps1
+az login --tenant "<tenant-id>"
+.\infra\configure-apim.ps1 -SubscriptionId "<subscription-id>" -ResourceGroup "<resource-group>" `
+  -BaseName "<base-name>" -FoundryProjectEndpoint "<foundry-project-endpoint>"
 dotnet build MCP_Sample.slnx
 ```
 
-`configure-apim.ps1` writes the APIM subscription key and endpoints to ignored, local `appsettings.Development.json` files for the three calling console projects. It never prints the key. Each file also contains the Foundry project endpoint and model deployment name; ensure the deployment name matches a model deployed in `rg-foundry-gen`. The agent hosts run locally; the API and MCP servers stay deployed.
+`configure-apim.ps1` writes the APIM subscription key and endpoints to ignored, local `appsettings.Development.json` files for the three calling console projects. It never prints the key. Supply your Foundry project endpoint and model deployment name; ensure the deployment exists in that project. The agent hosts run locally; the API and MCP servers stay deployed.
 
 ```bash
 dotnet run --project src/OpsBot.NoTools -- --ask "What's wrong with inventory, who do I call, is there a runbook, and is anything open on it?"
@@ -66,16 +67,23 @@ Flags: `--ask "<question>"` one shot · `--permissions ask|auto` (default `ask`:
 
 ## Azure provisioning
 
-The templates mirror the source `<resource-group>` layout in Sweden Central: a Linux P0v3 App Service plan, four .NET 10 apps, Developer APIM, API Center Free in East US, and separate Log Analytics/App Insights pairs for the apps and MCP servers. The APIM publisher address in `infra/main.bicepparam` is a placeholder; replace it with a monitored address before provisioning.
+The templates create a Linux P0v3 App Service plan, four .NET 10 apps, Developer APIM, API Center Free in East US, and separate Log Analytics/App Insights pairs for the apps and MCP servers. The APIM publisher address in `infra/main.bicepparam` is a placeholder; replace it with a monitored address before provisioning. Subscription, resource-group, tenant, base-name, and Foundry endpoint values are supplied at deployment time, not stored in the repository.
 
 ```powershell
-az deployment group validate --subscription <subscription-id> -g <resource-group> -n main -f infra/main.bicep -p infra/main.bicepparam
-az deployment group create --subscription <subscription-id> -g <resource-group> -n main -f infra/main.bicep -p infra/main.bicepparam
-.\infra\deploy-apps.ps1 -SubscriptionId <subscription-id>
-.\infra\postdeploy.ps1 -ResourceGroup <resource-group> -TenantId "<tenant-guid>" -McpResourceAppId "<resource-app-id>"
+$SubscriptionId = "<subscription-id>"
+$ResourceGroup = "<resource-group>"
+$BaseName = "<base-name>"
+$FoundryProjectEndpoint = "<foundry-project-endpoint>"
+az deployment group validate --subscription $SubscriptionId -g $ResourceGroup -n main -f infra/main.bicep -p infra/main.bicepparam
+az deployment group create --subscription $SubscriptionId -g $ResourceGroup -n main -f infra/main.bicep -p infra/main.bicepparam
+.\infra\deploy-apps.ps1 -SubscriptionId $SubscriptionId -ResourceGroup $ResourceGroup -BaseName $BaseName
+.\infra\configure-apim.ps1 -SubscriptionId $SubscriptionId -ResourceGroup $ResourceGroup -BaseName $BaseName -FoundryProjectEndpoint $FoundryProjectEndpoint
+.\infra\postdeploy.ps1 -SubscriptionId $SubscriptionId -ResourceGroup $ResourceGroup -BaseName $BaseName -TenantId "<tenant-id>" -McpResourceAppId "<resource-app-id>"
 ```
 
 The App Service plan and Developer APIM are billable resources. The Bicep deployment provisions infrastructure; the next script publishes the four applications, and `postdeploy.ps1` configures APIM/API Center.
+
+Demo helper scripts derive deployed URLs from the base name. Pass the same value used at deployment, for example `.\scripts\demo1.ps1 -BaseName "<base-name>"` or `.\scripts\reset.ps1 -BaseName "<base-name>"`.
 
 ## Things we were tempted to change in the API (and didn't)
 
