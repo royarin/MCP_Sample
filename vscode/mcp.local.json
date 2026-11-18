@@ -1,0 +1,7 @@
+{
+  "//": "Local development – servers started with dotnet run.",
+  "servers": {
+    "opsdesk-code-local":  { "type": "http", "url": "http://localhost:5001/mcp" },
+    "opsdesk-tasks-local": { "type": "http", "url": "http://localhost:5002/mcp" }
+  }
+}

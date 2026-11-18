@@ -1,0 +1,10 @@
+// One agent question, end to end: OpsBot.Mcp (agent.question) → APIM → MCP server → OpsDesk API
+let lastOp = toscalar(
+    requests
+    | where cloud_RoleName in ("opsbot-mcp", "opsdesk-mcp", "opsdesk-tasks") or name has "tools/call" or name == "agent.question"
+    | top 1 by timestamp desc
+    | project operation_Id);
+union requests, dependencies
+| where operation_Id == lastOp
+| project timestamp, itemType, cloud_RoleName, name, duration, resultCode, success, customDimensions
+| order by timestamp asc

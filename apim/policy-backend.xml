@@ -1,0 +1,11 @@
+<!-- Apply to the imported "OpsDesk API" (all operations). Points at the Container App backend; if the API
+     ever gains a key, inject it here from a named value so clients and generated MCP servers never see it. -->
+<policies>
+  <inbound>
+    <base />
+    <set-backend-service base-url="{{opsdesk-api-url}}" />
+  </inbound>
+  <backend><base /></backend>
+  <outbound><base /></outbound>
+  <on-error><base /></on-error>
+</policies>
