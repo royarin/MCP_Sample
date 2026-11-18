@@ -1,5 +1,4 @@
 using Azure.AI.Extensions.OpenAI;
-using Azure.AI.Projects;
 using Azure.Core;
 using Azure.Identity;
 using Microsoft.Extensions.AI;
@@ -30,10 +29,10 @@ public static class AgentConfig
     {
         var endpoint = c["Foundry:ProjectEndpoint"] ?? throw new InvalidOperationException(
             "Foundry:ProjectEndpoint is not configured in appsettings.Development.json.");
-        var project = new AIProjectClient(new Uri(endpoint), CreateCredential());
+        var projectOpenAI = new ProjectOpenAIClient(new Uri(endpoint), CreateCredential());
         // The Foundry project Responses API remains explicitly evaluation-only in the current SDK.
 #pragma warning disable AAIP002, OPENAI001
-        IChatClient inner = project.GetProjectOpenAIClient()
+        IChatClient inner = projectOpenAI
             .GetProjectResponsesClientForModel(Deployment(c))
             .AsIChatClient();
 #pragma warning restore AAIP002, OPENAI001
