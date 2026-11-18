@@ -1,5 +1,5 @@
-// OpsDesk MCP demo environment – App Service layout matching the source <resource-group> environment.
-// az deployment group create --subscription <subscription-id> -g <resource-group> -n main -f infra/main.bicep -p infra/main.bicepparam
+// OpsDesk MCP demo environment – App Service layout for a caller-selected Azure resource group.
+// Deploy with a caller-supplied subscription ID and resource group; see README.md.
 // Creates: two Log Analytics/App Insights pairs, one Linux App Service plan + four apps,
 // APIM, and API Center. Entra app registrations are manual (infra/entra.md);
 // APIM MCP servers + policies are configured by infra/postdeploy.ps1.
@@ -9,7 +9,7 @@ param location string = resourceGroup().location
 @description('Region for Azure API Center, matching the source environment')
 param apiCenterLocation string = 'eastus'
 @description('Short name used in resource names')
-param baseName string = '<base-name>'
+param baseName string = 'opsdesk-demo'
 @description('APIM tier; Developer matches the source demo environment')
 @allowed(['Developer', 'StandardV2', 'PremiumV2', 'Premium'])
 param apimSku string = 'Developer'

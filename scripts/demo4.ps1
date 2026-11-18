@@ -1,6 +1,9 @@
 # Demo 4 · Enterprise-grade MCP on Azure – opsdesk-secure, pre-provisioned. Config is shown in the portal; this is the "in action" part.
-param([switch]$Operator)
-. "$PSScriptRoot/urls.ps1"
+param(
+  [Parameter(Mandatory)][string]$BaseName,
+  [switch]$Operator
+)
+. "$PSScriptRoot/urls.ps1" -BaseName $BaseName
 $settingsPath = Join-Path $PSScriptRoot '..\src\OpsBot.Mcp\appsettings.Development.json'
 $localSettings = Get-Content $settingsPath -Raw | ConvertFrom-Json
 $role = if ($Operator) { "Operator" } else { "Reader" }

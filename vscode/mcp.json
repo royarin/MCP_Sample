@@ -1,5 +1,5 @@
 {
-  "//": "Copy to .vscode/mcp.json. Replace the <...> hosts with the deployed URLs (scripts/urls.ps1). Enable one server at a time during the demo.",
+  "//": "Copy to .vscode/mcp.json. Replace <apim-name> with your deployed APIM service name. Enable one server at a time during the demo.",
   "servers": {
     "opsdesk-code":   { "type": "http", "url": "https://<apim-name>.azure-api.net/opsdesk-code/mcp",
                         "headers": { "Ocp-Apim-Subscription-Key": "${input:apimKey}" } },

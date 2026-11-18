@@ -1,8 +1,8 @@
 # Publishes the four .NET 10 apps and deploys ZIP packages to the Linux App Service apps.
 param(
   [Parameter(Mandatory)][string]$SubscriptionId,
-  [string]$ResourceGroup = "<resource-group>",
-  [string]$BaseName = "<base-name>",
+  [Parameter(Mandatory)][string]$ResourceGroup,
+  [Parameter(Mandatory)][string]$BaseName,
   [string]$Configuration = "Release"
 )
 $ErrorActionPreference = "Stop"

@@ -1,6 +1,6 @@
 # Azure API Management – API and MCP routes
 
-All OpsDesk routes are published through `<apim-name>`. Every route requires a subscription key.
+All OpsDesk routes are published through `apim-<base-name>`. Every route requires a subscription key.
 
 | MCP server | Demo | Protection | Backend |
 |---|---|---|---|

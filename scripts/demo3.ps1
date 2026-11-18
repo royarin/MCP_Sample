@@ -1,6 +1,9 @@
 # Demo 3 · Tool design is the UX for the model – two servers, one console host.
-param([switch]$Local)
-. "$PSScriptRoot/urls.ps1"
+param(
+  [Parameter(Mandatory)][string]$BaseName,
+  [switch]$Local
+)
+. "$PSScriptRoot/urls.ps1" -BaseName $BaseName
 $a = $Local ? "http://localhost:5001/mcp" : $McpCode
 $b = $Local ? "http://localhost:5002/mcp" : $McpTasks
 if ($Local) {

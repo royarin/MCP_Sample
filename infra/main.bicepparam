@@ -1,6 +1,6 @@
 using './main.bicep'
 
-param baseName = '<base-name>'
+param baseName = 'opsdesk-demo'
 param location = 'swedencentral'
 param apiCenterLocation = 'eastus'
 param apimSku = 'Developer'
