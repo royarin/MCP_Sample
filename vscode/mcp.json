@@ -1,11 +1,11 @@
 {
   "//": "Copy to .vscode/mcp.json. Replace the <...> hosts with the deployed URLs (scripts/urls.ps1). Enable one server at a time during the demo.",
   "servers": {
-    "opsdesk-code":   { "type": "http", "url": "https://ca-opsdesk-mcp.<env>.azurecontainerapps.io/mcp" },
-    "opsdesk-tasks":  { "type": "http", "url": "https://ca-opsdesk-mcp-tasks.<env>.azurecontainerapps.io/mcp" },
-    "opsdesk-apim":   { "type": "http", "url": "https://<apim>.azure-api.net/opsdesk-apim/mcp",
+    "opsdesk-code":   { "type": "http", "url": "https://app-<base-name>-mcp.azurewebsites.net/mcp" },
+    "opsdesk-tasks":  { "type": "http", "url": "https://app-<base-name>-mcp-tasks.azurewebsites.net/mcp" },
+    "opsdesk-apim":   { "type": "http", "url": "https://<apim-name>.azure-api.net/opsdesk-apim/mcp",
                         "headers": { "Ocp-Apim-Subscription-Key": "${input:apimKey}" } },
-    "opsdesk-secure": { "type": "http", "url": "https://<apim>.azure-api.net/opsdesk-secure/mcp",
+    "opsdesk-secure": { "type": "http", "url": "https://<apim-name>.azure-api.net/opsdesk-secure/mcp",
                         "headers": { "Authorization": "Bearer ${input:token}" } }
   },
   "inputs": [

@@ -27,7 +27,7 @@ Hosts used in the demos: **VS Code Copilot chat** (a host you didn't write) and 
 | # | Demo | What runs where |
 |---|---|---|
 | 1 | An agent without your systems is just a chatbot | `OpsBot.NoTools`, `OpsBot.Tools` on the laptop → API in Azure |
-| 2 | From existing API to MCP server – two ways | Copilot → `OpsDesk.Mcp` (Container Apps) and `opsdesk-apim` (APIM, no code) |
+| 2 | From existing API to MCP server – two ways | Copilot → `OpsDesk.Mcp` (App Service) and `opsdesk-apim` (APIM, no code) |
 | 3 | Tool design is the UX for the model | `OpsBot.Mcp --compare` → `OpsDesk.Mcp` vs `OpsDesk.Mcp.Tasks`: calls · turns · tokens · time; typo test; permission prompt |
 | 4 | Enterprise-grade MCP on Azure (pre-provisioned) | `opsdesk-secure` in APIM: Entra `validate-jwt`, role-based write-tool block, API Center, App Insights trace |
 
@@ -45,8 +45,8 @@ cd src/OpsBot.Mcp
 dotnet user-secrets set AzureOpenAI:Endpoint       https://<resource>.openai.azure.com/
 dotnet user-secrets set AzureOpenAI:ApiKey         <key>          # omit to use az login
 dotnet user-secrets set AzureOpenAI:DeploymentName gpt-4o
-dotnet user-secrets set OpsDesk:BaseUrl            https://<ca-opsdesk-api>   # or http://localhost:5047
-dotnet user-secrets set Mcp:Endpoint               https://<ca-opsdesk-mcp>/mcp
+dotnet user-secrets set OpsDesk:BaseUrl            https://app-<base-name>-api.azurewebsites.net   # or http://localhost:5047
+dotnet user-secrets set Mcp:Endpoint               https://app-<base-name>-mcp.azurewebsites.net/mcp
 ```
 
 Run locally (one terminal each): `OpsDesk.Api` (:5047), `OpsDesk.Web`, `OpsDesk.Mcp` (:5001), `OpsDesk.Mcp.Tasks` (:5002).
@@ -65,10 +65,23 @@ Flags: `--ask "<question>"` one shot · `--permissions ask|auto` (default `ask`:
 ## Folders
 
 - `apim/` – click-path for *Expose API as MCP server*, `policy-backend.xml`, `policy-mcp-auth.xml`, `policy-mcp-governance.xml`
-- `infra/` – `main.bicep` (Container Apps ×4, APIM, API Center, App Insights), `build-images.ps1`, `postdeploy.ps1`, `entra.md`
+- `infra/` – `main.bicep` (Linux App Service ×4, APIM, API Center, paired Log Analytics/App Insights), `deploy-apps.ps1`, `postdeploy.ps1`, `entra.md`
 - `vscode/` – `mcp.json` (Azure endpoints: `opsdesk-code`, `opsdesk-tasks`, `opsdesk-apim`, `opsdesk-secure`), `mcp.local.json`
 - `scripts/` – `urls.ps1`, `reset.ps1`, `demo1–4.ps1`, `tokens.ps1`, `appinsights.kql`, `demo4-expected.md`
 - `fallback/` – recordings (git-ignored)
+
+## Azure provisioning
+
+The templates mirror the source `<resource-group>` layout in Sweden Central: a Linux P0v3 App Service plan, four .NET 10 apps, Developer APIM, API Center Free in East US, and separate Log Analytics/App Insights pairs for the apps and MCP servers. The APIM publisher address in `infra/main.bicepparam` is a placeholder; replace it with a monitored address before provisioning.
+
+```powershell
+az deployment group validate --subscription <subscription-id> -g <resource-group> -n main -f infra/main.bicep -p infra/main.bicepparam
+az deployment group create --subscription <subscription-id> -g <resource-group> -n main -f infra/main.bicep -p infra/main.bicepparam
+.\infra\deploy-apps.ps1 -SubscriptionId <subscription-id>
+.\infra\postdeploy.ps1 -ResourceGroup <resource-group> -TenantId "<tenant-guid>" -McpResourceAppId "<resource-app-id>"
+```
+
+The App Service plan and Developer APIM are billable resources. The Bicep deployment provisions infrastructure; the next script publishes the four applications, and `postdeploy.ps1` configures APIM/API Center.
 
 ## Things we were tempted to change in the API (and didn't)
 

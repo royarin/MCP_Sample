@@ -1,6 +1,6 @@
 # Azure API Management – Demo 2 (no-code server) and Demo 4 (pre-provisioned controls)
 
-One APIM instance (`apim-opsdesk-mcp`), two MCP servers:
+One APIM instance (`<apim-name>`), two MCP servers:
 
 | MCP server | Demo | Protection | Backend |
 |---|---|---|---|
@@ -9,9 +9,9 @@ One APIM instance (`apim-opsdesk-mcp`), two MCP servers:
 
 ## Demo 2 – expose the existing API as an MCP server (no code)
 
-1. Export the OpenAPI document from the deployed API: `GET https://<ca-opsdesk-api>/openapi/v1.json` → `apim/opsdesk-api.openapi.json`.
+1. Export the OpenAPI document from the deployed API: `GET https://app-<base-name>-api.azurewebsites.net/openapi/v1.json` → `apim/opsdesk-api.openapi.json`.
 2. APIM → **APIs → + Add API → OpenAPI** → upload → display name `OpsDesk API`, suffix `opsdesk`, product *demo-open*.
-3. Named value `opsdesk-api-url` = Container App URL; apply `policy-backend.xml` at API scope.
+3. Named value `opsdesk-api-url` = OpsDesk API App Service URL; apply `policy-backend.xml` at API scope.
 4. APIM → **APIs → MCP Servers → + Create MCP server → Expose an API as an MCP server** → `OpsDesk API` → select all operations → name `opsdesk-apim`, base path `opsdesk-apim`.
 5. Endpoint `https://<apim>.azure-api.net/opsdesk-apim/mcp` → `vscode/mcp.json` (`opsdesk-apim`) and `OpsBot.Mcp` (`--Mcp:Endpoint … --Mcp:ApimSubscriptionKey …`).
 6. Verify in MCP Inspector with header `Ocp-Apim-Subscription-Key`. Observe: tool names = operation ids, descriptions = OpenAPI summaries.
