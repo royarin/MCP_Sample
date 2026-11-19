@@ -1,9 +1,12 @@
 param(
   [Parameter(Mandatory)][string]$SubscriptionId,
   [Parameter(Mandatory)][string]$ResourceGroup,
-  [Parameter(Mandatory)][string]$BaseName
+  [Parameter(Mandatory)][string]$BaseName,
+  [string]$UniqueSuffix = ""
 )
 $ErrorActionPreference = "Stop"
+. "$PSScriptRoot\naming.ps1"
+$BaseName = Resolve-DemoBaseName $BaseName $UniqueSuffix
 . "$PSScriptRoot\local-settings.ps1"
 $version = "2024-03-01"
 $center = "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroup/providers/Microsoft.ApiCenter/services/apic-$BaseName"

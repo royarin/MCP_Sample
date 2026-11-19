@@ -1,7 +1,7 @@
 # Demo 3 rehearsal: measure a read-only briefing and write a sanitized report.
-param([Parameter(Mandatory)][string]$BaseName)
+param([Parameter(Mandatory)][string]$BaseName, [string]$UniqueSuffix = "")
 $ErrorActionPreference = 'Stop'
-. "$PSScriptRoot\urls.ps1" -BaseName $BaseName
+. "$PSScriptRoot\urls.ps1" -BaseName $BaseName -UniqueSuffix $UniqueSuffix
 $root = Split-Path $PSScriptRoot -Parent
 $project = Join-Path $root 'src\OpsBot.Mcp'
 $report = Join-Path $root 'docs\demo3-measurements.md'

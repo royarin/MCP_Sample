@@ -1,6 +1,10 @@
 param(
-  [Parameter(Mandatory)][string]$BaseName
+  [Parameter(Mandatory)][string]$BaseName,
+  [string]$UniqueSuffix = ""
 )
+
+. "$PSScriptRoot\..\infra\naming.ps1"
+$BaseName = Resolve-DemoBaseName $BaseName $UniqueSuffix
 
 $apiHost = "https://app-$BaseName-api.azurewebsites.net"
 $webHost = "https://app-$BaseName-web.azurewebsites.net"

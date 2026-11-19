@@ -58,3 +58,13 @@ The APIM display names now exactly match their resource IDs: `opsdesk-api`, `ops
 Renames used display-name-only PATCH requests, not generated-server replacement. Before/after comparisons confirmed that all non-name APIM properties, both generated tool collections and the secure policy were unchanged. Provisioning now reconciles generated-server names through PATCH and leaves matching names alone; local mocked tests covered rename, no-op and initial-creation paths.
 
 All available Demo 1-4 runtime scenarios were repeated against the renamed resources with the existing built console hosts: grounded briefings, incident/notification approvals, three typo rehearsals, 401/401/403, curated write refusal without mutation, discovery and three real-model rate-limit rehearsals. Earlier endpoints still served reads without JWT after the secure budget was exhausted. A new printed question trace again joined the agent, four APIM requests and four API requests. Desktop-only checks remain manual.
+
+## Caller-supplied resource uniqueness
+
+Bicep and the PowerShell deployment, configuration and demo helpers now share the caller-selected `BaseName`/`UniqueSuffix` naming rule. A complete legacy `BaseName` with no suffix still produces the same names. Existing Azure resources were not renamed or reprovisioned.
+
+Bicep compilation and non-deploying ARM Template-level validation passed with a separate caller suffix. Parameter-file compilation passed both with an explicit suffix and with the suffix environment variable absent. All 17 PowerShell scripts parsed. Focused checks covered invalid names, newline rejection, the 45-character boundary, all eight generated URLs, APIM configuration targets, mocked app deployment and mocked API Center registration. Splitting the existing deployment's full stem into base/suffix reproduced its live endpoint.
+
+All available Demo 1-4 runtime scenarios passed again using the existing built hosts: both Demo 1 agents, all three MCP catalogs, grounded briefings, two write/notification approvals, three typo/correction rehearsals, the 401/401/403 cases, read-only refusal without mutation, API Center discovery, and three real-model rate-limit rehearsals. Code, task and open-generated reads still worked without JWT while the dedicated secure budget was exhausted. Live catalog metadata matched the generated endpoint; the printed question trace contained one agent request, four gateway requests and four API requests, and the per-tool counts/p95 query returned data. Incident state remained clean afterward.
+
+This naming-only change did not rebuild application binaries or create a new Azure environment. The original technical manual remains unchanged; the previously noted desktop-only checks remain manual.

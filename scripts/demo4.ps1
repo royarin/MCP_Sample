@@ -1,9 +1,10 @@
 param(
   [Parameter(Mandatory)][string]$BaseName,
-  [ValidateSet("normal", "no-key", "no-token", "norole", "open", "discover")][string]$Mode = "normal"
+  [ValidateSet("normal", "no-key", "no-token", "norole", "open", "discover")][string]$Mode = "normal",
+  [string]$UniqueSuffix = ""
 )
 $ErrorActionPreference = "Stop"
-. "$PSScriptRoot\urls.ps1" -BaseName $BaseName
+. "$PSScriptRoot\urls.ps1" -BaseName $BaseName -UniqueSuffix $UniqueSuffix
 $project = Join-Path $PSScriptRoot "..\src\OpsBot.Enterprise\OpsBot.Enterprise.csproj"
 $launch = switch ($Mode) {
   "no-key" { @("--no-key") }

@@ -1,9 +1,10 @@
 param(
   [Parameter(Mandatory)][string]$BaseName,
-  [ValidateRange(1, 100)][int]$Calls = 10
+  [ValidateRange(1, 100)][int]$Calls = 10,
+  [string]$UniqueSuffix = ""
 )
 $ErrorActionPreference = "Stop"
-. "$PSScriptRoot\urls.ps1" -BaseName $BaseName
+. "$PSScriptRoot\urls.ps1" -BaseName $BaseName -UniqueSuffix $UniqueSuffix
 . "$PSScriptRoot\mcp-client.ps1"
 $settings = Get-Content (Join-Path $PSScriptRoot "..\src\OpsBot.Enterprise\appsettings.Development.json") -Raw | ConvertFrom-Json
 $token = Get-EnterpriseToken $settings

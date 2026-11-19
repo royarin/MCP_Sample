@@ -15,6 +15,8 @@ Display names deliberately match resource IDs: `opsdesk-api` is the original RES
 
 Run `.\infra\configure-apim.ps1` after the API and MCP App Services are deployed. It imports the OpenAPI API, creates the `demo-open` product, publishes the API-backed and passthrough MCP servers, excludes `Database/reset` from generated tools, creates a local subscription, and writes its key only into ignored `appsettings.Development.json` files.
 
+Pass the same `-BaseName` and `-UniqueSuffix` used for Bicep and app deployment, for example `-BaseName opsdesk-demo -UniqueSuffix lab42` targets `apim-opsdesk-demo-lab42`. Omit the suffix only when `BaseName` already contains the full deployed stem.
+
 `opsdesk-code` and `opsdesk-tasks` are **existing MCP servers**, not API-generated tool catalogs. Each registration references an APIM backend through `backendId` and maps `mcpProperties.endpoints.mcp.uriTemplate` to `/mcp`; the backend URL is the corresponding App Service origin. Both registrations still use resource type `mcp`, but the backend reference distinguishes them from `opsdesk-apim`, whose tools reference REST API operations. After provisioning, check `tools/list` through APIM: expect 10 endpoint-shaped tools and 5 task-shaped tools, not an empty catalog.
 
 The key is never printed. `OpsBot.Tools` sends it as `Ocp-Apim-Subscription-Key`; `OpsBot.Mcp` sends it for every APIM MCP call. `vscode/mcp.json` prompts for the same key.

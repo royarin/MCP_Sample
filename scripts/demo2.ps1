@@ -1,6 +1,6 @@
 # Demo 2 · From existing API to MCP server – two ways. Copilot is the host; this script covers the Inspector + console parts.
-param([Parameter(Mandatory)][string]$BaseName)
-. "$PSScriptRoot/urls.ps1" -BaseName $BaseName
+param([Parameter(Mandatory)][string]$BaseName, [string]$UniqueSuffix = "")
+. "$PSScriptRoot\urls.ps1" -BaseName $BaseName -UniqueSuffix $UniqueSuffix
 Write-Host "`nOpenAPI:   $ApiDirectUrl/openapi/v1.json" -ForegroundColor DarkGray
 Write-Host "Dashboard: $WebUrl" -ForegroundColor DarkGray
 Write-Host "Inspector: npx @modelcontextprotocol/inspector  → $McpCode" -ForegroundColor DarkGray
