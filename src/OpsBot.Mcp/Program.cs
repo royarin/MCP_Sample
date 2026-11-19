@@ -32,11 +32,11 @@ try
         foreach (var (compareEndpoint, index) in endpoints.Select((ep, i) => (ep, i)))
         {
             var meter = new UsageMeter();
-            var chat = AgentConfig.CreateChatClient(config, meter);
+            var chat = AgentConfig.CreateChatClient(config, meter, maxOutputTokens: 1200);
             var conn = await McpConnection.ConnectAsync(compareEndpoint, config);
             await using var client = conn.Client;
             var tools = PermissionGate.Wrap(conn.Tools, AgentConfig.PermissionMode(config));
-            var agent = chat.AsAIAgent(instructions: OpsBotInstructions.Text, name: OpsBotInstructions.AgentName, tools: [.. tools]);
+            var agent = chat.AsAIAgent(instructions: OpsBotInstructions.McpText, name: OpsBotInstructions.AgentName, tools: [.. tools]);
             var runLabel = index == 0 ? "endpoint-shaped" : "task-shaped";
             Ui.Banner($"OpsBot · MCP → {conn.ServerName} · {runLabel.ToUpperInvariant()} ({conn.ToolCount} tools · {conn.CatalogTokens:N0} catalogue tokens)", tools, accent);
             Ui.PromptMarker(runLabel, accent); Console.WriteLine(question);
@@ -65,11 +65,11 @@ try
 
     var endpoint = config["Mcp:Endpoint"] ?? "http://localhost:5001/mcp";
     var usage = new UsageMeter();
-    var chatClient = AgentConfig.CreateChatClient(config, usage);
+    var chatClient = AgentConfig.CreateChatClient(config, usage, maxOutputTokens: 1200);
     var connection = await McpConnection.ConnectAsync(endpoint, config);
     await using var mcpClient = connection.Client;
     var availableTools = PermissionGate.Wrap(connection.Tools, AgentConfig.PermissionMode(config));
-    var assistant = chatClient.AsAIAgent(instructions: OpsBotInstructions.Text, name: OpsBotInstructions.AgentName, tools: [.. availableTools]);
+    var assistant = chatClient.AsAIAgent(instructions: OpsBotInstructions.McpText, name: OpsBotInstructions.AgentName, tools: [.. availableTools]);
     var runName = string.IsNullOrWhiteSpace(label) ? connection.ServerName : label;
     Ui.Banner($"OpsBot · MCP → {connection.ServerName} · {runName.ToUpperInvariant()} ({connection.ToolCount} tools · {connection.CatalogTokens:N0} catalogue tokens)", availableTools, accent);
     if (config["ask"] is { Length: > 0 } ask)

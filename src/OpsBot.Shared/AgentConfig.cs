@@ -25,7 +25,7 @@ public static class AgentConfig
         c["Foundry:DeploymentName"] ?? c["AzureOpenAI:DeploymentName"] ?? c["AzureOpenAI:Deployment"] ?? "gpt-4o";
 
     /// <summary>Foundry project chat client wrapped in <see cref="ToolTraceChatClient"/>.</summary>
-    public static IChatClient CreateChatClient(IConfiguration c, UsageMeter meter)
+    public static IChatClient CreateChatClient(IConfiguration c, UsageMeter meter, int? maxOutputTokens = null)
     {
         var endpoint = c["Foundry:ProjectEndpoint"] ?? throw new InvalidOperationException(
             "Foundry:ProjectEndpoint is not configured in appsettings.Development.json.");
@@ -43,7 +43,7 @@ public static class AgentConfig
             .GetProjectResponsesClientForModel(Deployment(c))
             .AsIChatClient(Deployment(c));
 #pragma warning restore AAIP002, OPENAI001
-        return new ToolTraceChatClient(inner, meter, c.GetValue<int?>("Foundry:MaxOutputTokens") ?? 1200);
+        return new ToolTraceChatClient(inner, meter, c.GetValue<int?>("Foundry:MaxOutputTokens") ?? maxOutputTokens);
     }
 
     public static TokenCredential CreateCredential(
