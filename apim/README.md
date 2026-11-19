@@ -17,6 +17,14 @@ Run `.\infra\configure-apim.ps1` after the API and MCP App Services are deployed
 
 Pass the same `-BaseName` and `-UniqueSuffix` used for Bicep and app deployment, for example `-BaseName opsdesk-demo -UniqueSuffix lab42` targets `apim-opsdesk-demo-lab42`. Omit the suffix only when `BaseName` already contains the full deployed stem.
 
+Browser testing in API Center uses the demo's **global wildcard CORS** policy from `cors-demo.xml`. Provisioning applies it first in the gateway's inbound policy while preserving other global policies. It permits any origin, MCP methods and request headers, and exposes MCP session/authentication headers; cookie credentials are disabled. Subscription keys and the secure endpoint's Entra/role/rate controls are still required. This is intentionally permissive for the demo: restrict origins before production use.
+
+Global outbound/error policies also set the wildcard response header so browser clients can read authorization failures. In the current deployment, API-generated MCP servers acknowledge `notifications/initialized` with HTTP 202 without CORS headers, even with API-scoped CORS and explicit global outbound headers. Preflight, initialization and tool discovery return the correct CORS headers, but a browser client that requires CORS on the notification acknowledgement may still fail to connect. The code/task passthrough endpoints passed the complete handshake. Do not bypass identity or change MCP notification handling to mask this limitation.
+
+The secure policy's custom rate-limit response sets the wildcard header explicitly because its `return-response` skips inherited error policies. Its matching JSON-RPC ID, `isError` result and retry guidance are unchanged.
+
+To update only CORS on an existing deployment, run `.\infra\configure-cors.ps1 -SubscriptionId "<subscription-id>" -ResourceGroup "<resource-group>" -BaseName "<complete-existing-base-name>"` from the repository root. This does not replace MCP APIs, tools, products or keys.
+
 `opsdesk-code` and `opsdesk-tasks` are **existing MCP servers**, not API-generated tool catalogs. Each registration references an APIM backend through `backendId` and maps `mcpProperties.endpoints.mcp.uriTemplate` to `/mcp`; the backend URL is the corresponding App Service origin. Both registrations still use resource type `mcp`, but the backend reference distinguishes them from `opsdesk-apim`, whose tools reference REST API operations. After provisioning, check `tools/list` through APIM: expect 10 endpoint-shaped tools and 5 task-shaped tools, not an empty catalog.
 
 The key is never printed. `OpsBot.Tools` sends it as `Ocp-Apim-Subscription-Key`; `OpsBot.Mcp` sends it for every APIM MCP call. `vscode/mcp.json` prompts for the same key.
