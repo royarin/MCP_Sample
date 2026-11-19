@@ -1,0 +1,72 @@
+<policies>
+  <inbound>
+    <base />
+    <validate-jwt header-name="Authorization" failed-validation-httpcode="401"
+                  failed-validation-error-message="a valid Entra ID access token for api://opsdesk-mcp is required"
+                  require-scheme="Bearer" output-token-variable-name="jwt">
+      <openid-config url="https://login.microsoftonline.com/{{tenant-id}}/v2.0/.well-known/openid-configuration" />
+      <audiences>
+        <audience>api://opsdesk-mcp</audience>
+        <audience>{{opsdesk-mcp-app-id}}</audience>
+      </audiences>
+      <issuers>
+        <issuer>https://login.microsoftonline.com/{{tenant-id}}/v2.0</issuer>
+      </issuers>
+    </validate-jwt>
+    <choose>
+      <when condition='@(!((Jwt)context.Variables["jwt"]).Claims.GetValueOrDefault("roles", new string[0]).Contains("Ops.Agent"))'>
+        <return-response>
+          <set-status code="403" reason="Forbidden" />
+          <set-header name="Content-Type" exists-action="override"><value>application/json</value></set-header>
+          <set-body>{"message":"authenticated, not authorised: role Ops.Agent required"}</set-body>
+        </return-response>
+      </when>
+    </choose>
+    <set-variable name="mcpMethod" value='@{
+      if (context.Request.Method != "POST" || context.Request.Body == null) { return ""; }
+      var body = context.Request.Body.As&lt;JObject&gt;(preserveContent: true);
+      return (string)body["method"] ?? "";
+    }' />
+    <choose>
+      <when condition='@((string)context.Variables["mcpMethod"] == "tools/call")'>
+        <set-variable name="mcpRequestId" value='@{
+          var body = context.Request.Body.As&lt;JObject&gt;(preserveContent: true);
+          return body["id"] == null ? "null" : body["id"].ToString(Newtonsoft.Json.Formatting.None);
+        }' />
+        <set-variable name="mcpTool" value='@((string)context.Request.Body.As&lt;JObject&gt;(preserveContent: true)["params"]?["name"] ?? "")' />
+        <trace source="OpsDesk.MCP" severity="information">
+          <message>tools/call</message>
+          <metadata name="mcp.tool" value='@((string)context.Variables["mcpTool"])' />
+          <metadata name="mcp.method" value="tools/call" />
+        </trace>
+        <rate-limit-by-key calls="{{opsdesk-ratelimit-calls}}" renewal-period="{{opsdesk-ratelimit-period}}"
+          counter-key='@("opsdesk-apim-secure:" + ((Jwt)context.Variables["jwt"]).Claims.GetValueOrDefault("azp", new string[0]).FirstOrDefault())'
+          retry-after-variable-name="mcpRetryAfter" />
+      </when>
+    </choose>
+  </inbound>
+  <backend><base /></backend>
+  <outbound><base /></outbound>
+  <on-error>
+    <choose>
+      <when condition='@(context.LastError.Source == "rate-limit-by-key")'>
+        <return-response>
+          <set-status code="200" reason="OK" />
+          <set-header name="Content-Type" exists-action="override"><value>application/json</value></set-header>
+          <set-body>@{
+            var retry = context.Variables.ContainsKey("mcpRetryAfter") ? ((int)context.Variables["mcpRetryAfter"]).ToString() : context.Response.Headers.GetValueOrDefault("Retry-After", "{{opsdesk-ratelimit-period}}");
+            var id = JToken.Parse((string)context.Variables.GetValueOrDefault("mcpRequestId", "null"));
+            return new JObject(
+              new JProperty("jsonrpc", "2.0"), new JProperty("id", id),
+              new JProperty("result", new JObject(
+                new JProperty("isError", true),
+                new JProperty("content", new JArray(new JObject(
+                  new JProperty("type", "text"),
+                  new JProperty("text", "Rate limit exceeded: {{opsdesk-ratelimit-calls}} tool calls per minute for this agent. Retry after " + retry + " s."))))))).ToString();
+          }</set-body>
+        </return-response>
+      </when>
+    </choose>
+    <base />
+  </on-error>
+</policies>

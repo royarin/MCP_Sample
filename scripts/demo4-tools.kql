@@ -1,0 +1,12 @@
+let tools = app('<apim-appinsights-name>').traces
+| where timestamp > ago(1h)
+| where message == "tools/call"
+| extend tool = tostring(customDimensions["mcp.tool"])
+| where isnotempty(tool)
+| project operation_Id, requestSpan=operation_ParentId, tool;
+app('<apim-appinsights-name>').requests
+| where timestamp > ago(1h) and url has "/opsdesk-apim-secure/mcp"
+| extend requestSpan=id
+| join kind=inner tools on operation_Id, requestSpan
+| summarize calls=count(), p95_ms=percentile(duration, 95) by tool
+| render barchart

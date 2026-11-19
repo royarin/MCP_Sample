@@ -1,41 +1,31 @@
 # Entra ID setup for Demo 4
 
-## 1. MCP resource app – `app-opsdesk-mcp`
+Sign Azure CLI into the demo tenant, then run:
 
-```bash
-APP=$(az ad app create --display-name app-opsdesk-mcp --query appId -o tsv)
-az ad app update --id $APP --identifier-uris "api://opsdesk-mcp"
-az ad sp create --id $APP
+```powershell
+az login --tenant "<tenant-id>"
+.\infra\configure-entra.ps1 -TenantId "<tenant-id>"
 ```
 
-Portal → the app → **App roles** → add two roles (allowed member types: *Both*):
+The idempotent script creates or reuses these dedicated demo registrations:
 
-| Display name | Value |
+| App | Purpose |
 |---|---|
-| Ops reader | `Ops.Reader` |
-| Ops operator | `Ops.Operator` |
+| `app-opsdesk-mcp` | Resource `api://opsdesk-mcp`, v2 access tokens, application role `Ops.Agent` |
+| `opsdesk-agent` | Client-credentials identity granted `Ops.Agent` |
+| `opsdesk-agent-norole` | Authenticated client without the resource role; demonstrates HTTP 403 |
 
-Optional (user flows via Copilot): **Expose an API** → scope `Ops.Access`, admin consent.
+The caller needs permission to create application registrations/service principals and grant an application-role assignment. An administrator may need to run the setup. The no-role identity is intentionally allowed to obtain a token; the gateway, not token issuance, rejects its missing role.
 
-## 2. Service agents (for `OpsBot.Mcp --Mcp:Auth entra`)
+Client secrets are appended with a 30-day lifetime and written only into ignored `src\OpsBot.Enterprise\appsettings.Development.json`. Existing local secrets are preserved; `-RotateSecrets` appends new credentials explicitly. Remove expired demo credentials in Entra after use. Never paste secrets into a command, terminal transcript, or Git.
 
-```bash
-for A in opsdesk-agent-reader opsdesk-agent-operator; do
-  ID=$(az ad app create --display-name $A --query appId -o tsv); az ad sp create --id $ID
-  az ad app credential reset --id $ID --display-name demo --years 1      # copy password → user-secrets
-done
+Run `configure-apim.ps1 -EnterpriseOnly` next for an existing demo deployment. It merges the shared `demo-open` key, dedicated secure/open endpoints, and existing apps telemetry configuration into that same ignored file without overwriting identities or earlier hosts' settings. `OpsBot.Mcp` remains subscription-key-only; only `OpsBot.Enterprise` acquires Entra tokens.
+
+```powershell
+dotnet run --no-build --project src\OpsBot.Enterprise -- --no-key
+dotnet run --no-build --project src\OpsBot.Enterprise -- --no-token
+dotnet run --no-build --project src\OpsBot.Enterprise -- --identity norole
+dotnet run --no-build --project src\OpsBot.Enterprise
 ```
 
-Portal → each agent app → **API permissions → Add → My APIs → app-opsdesk-mcp → Application permissions** →
-`Ops.Reader` for the reader, `Ops.Operator` for the operator → **Grant admin consent**.
-
-## 3. Demo users (for Copilot via `${input:token}`)
-
-Assign `Ops.Reader` to `opsdesk.reader@<tenant>` and `Ops.Operator` to `opsdesk.operator@<tenant>` under
-**Enterprise applications → app-opsdesk-mcp → Users and groups**. Tokens: `scripts/tokens.ps1`.
-
-## 4. Local agent configuration
-
-Set `Mcp:Entra:TenantId`, `Scope`, and the `Identities.Reader` and `Identities.Operator` client IDs/secrets in the ignored `src/OpsBot.Mcp/appsettings.Development.json`. Set `Mcp:Entra:Role` to `Reader` or `Operator` for the selected run. The Demo 4 script reads these values locally and never prints or passes secrets on its command line.
-
-All calls still include the APIM product subscription key; the JWT supplies the caller identity and role.
+Expected connection results: 401, 401, 403, then five read-only tools. Each process stays interactive after a rejected connection; `reconnect` reloads local configuration, preserving launch flags.

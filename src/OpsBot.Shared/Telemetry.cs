@@ -16,17 +16,18 @@ public static class Telemetry
 {
     public static readonly ActivitySource Source = new("OpsBot.Agent");
 
-    public static TracerProvider? Start(string serviceName, IConfiguration c)
+    public static TracerProvider? Start(string serviceName, IConfiguration c, bool sampleAll = false)
     {
         var cs = c["APPLICATIONINSIGHTS_CONNECTION_STRING"];
         if (string.IsNullOrWhiteSpace(cs)) return null;
-        return Sdk.CreateTracerProviderBuilder()
+        var builder = Sdk.CreateTracerProviderBuilder()
             .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceName))
             .AddSource(Source.Name)
             .AddSource("Experimental.ModelContextProtocol")      // MCP C# SDK client/server spans
             .AddSource("Experimental.Microsoft.Extensions.AI")  // chat client spans (when enabled)
             .AddHttpClientInstrumentation()
-            .AddAzureMonitorTraceExporter(o => o.ConnectionString = cs)
-            .Build();
+            .AddAzureMonitorTraceExporter(o => o.ConnectionString = cs);
+        if (sampleAll) builder.SetSampler(new AlwaysOnSampler());
+        return builder.Build();
     }
 }

@@ -70,7 +70,7 @@ public static class ChatLoop
         activity?.SetTag("agent.input_tokens", meter.InputTokens);
         var snap = meter.Capture(runLabel);
         UsageMeter.PrintScorecard(snap);
-        if (printTraceId) Ui.Info($"agent.question trace id: {activity!.TraceId}");
+        if (printTraceId) Ui.Info($"trace: {activity!.TraceId}");
         return snap;
     }
 }

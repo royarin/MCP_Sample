@@ -16,8 +16,9 @@ with production controls on Azure.
 | `src/OpsBot.NoTools` | Console agent, no tools → cannot answer | 1 |
 | `src/OpsBot.Tools` | Console agent, five hand-wired functions over HttpClient (`OpsDeskFunctions.cs` is what MCP replaces) | 1 |
 | `src/OpsDesk.Mcp` | **Endpoint-shaped** MCP server: one tool per API operation, raw JSON (port 5001) | 2, 3 |
-| `src/OpsDesk.Mcp.Tasks` | **Task-shaped** MCP server: `get_system_briefing`, `get_oncall_handover`, `find_system`, `raise_incident`, `update_system_status` (port 5002) | 3, 4 |
-| `src/OpsBot.Mcp` | Console host that discovers its tools over MCP; `--compare` scorecard; Entra identity | 2, 3, 4 |
+| `src/OpsDesk.Mcp.Tasks` | **Task-shaped** MCP server: `get_system_briefing`, `get_oncall_handover`, `find_system`, `raise_incident`, `update_system_status` (port 5002) | 3 |
+| `src/OpsBot.Mcp` | Subscription-key-only console MCP host: interactive labels, permissions, session stats; rehearsal comparison | 3 |
+| `src/OpsBot.Enterprise` | Interactive Entra MCP host: secure/open API-generated tools, API Center discovery, question trace IDs | 4 |
 | `src/OpsBot.Shared` | Tool-call trace, **permission gate** (y / n / always before write tools), usage scorecard, tool-catalogue token meter | – |
 
 Hosts used in the demos: **VS Code Copilot chat** (a host you didn't write) and **OpsBot.Mcp** (a host you did).
@@ -28,8 +29,8 @@ Hosts used in the demos: **VS Code Copilot chat** (a host you didn't write) and 
 |---|---|---|
 | 1 | An agent without your systems is just a chatbot | `OpsBot.NoTools`, `OpsBot.Tools` on the laptop → API in Azure |
 | 2 | From existing API to MCP server – two ways | Copilot → `OpsDesk.Mcp` (App Service) and `opsdesk-apim` (APIM, no code) |
-| 3 | Tool design is the UX for the model | `OpsBot.Mcp --compare` → `OpsDesk.Mcp` vs `OpsDesk.Mcp.Tasks`: calls · turns · tokens · time; typo test; permission prompt |
-| 4 | Enterprise-grade MCP on Azure (pre-provisioned) | `opsdesk-secure` in APIM: Entra `validate-jwt`, role-based write-tool block, API Center, App Insights trace |
+| 3 | Tool design is the UX for the model | Two interactive `OpsBot.Mcp` panes → endpoint-shaped vs task-shaped tools; calls, turns, tokens, time, typo and approval flows |
+| 4 | Enterprise-grade MCP on Azure (pre-provisioned) | `OpsBot.Enterprise` → curated `opsdesk-apim-secure`: Entra identity, read-only surface, six calls/minute, API Center, cross-resource trace |
 
 Headline question (seed data: `inventory` is **Red**):
 > *What's wrong with inventory, who do I call, is there a runbook, and is anything open on it?*
@@ -40,12 +41,13 @@ Headline question (seed data: `inventory` is **Red**):
 # prerequisites: .NET 10 SDK, Azure CLI signed into the Foundry project tenant,
 # a model deployed to the Foundry project, optional VS Code + Copilot and Node for MCP Inspector
 az login --tenant "<tenant-id>"
+.\infra\configure-entra.ps1 -TenantId "<tenant-id>"
 .\infra\configure-apim.ps1 -SubscriptionId "<subscription-id>" -ResourceGroup "<resource-group>" `
   -BaseName "<base-name>" -FoundryProjectEndpoint "<foundry-project-endpoint>"
 dotnet build MCP_Sample.slnx
 ```
 
-`configure-apim.ps1` writes the APIM subscription key and endpoints to ignored, local `appsettings.Development.json` files for the three calling console projects. It never prints the key. Supply your Foundry project endpoint and model deployment name; ensure the deployment exists in that project. The agent hosts run locally; the API and MCP servers stay deployed.
+`configure-apim.ps1` merges endpoints, Foundry settings, and the shared `demo-open` key into ignored local development settings. It never prints keys or overwrites existing Entra secrets. Supply a real Foundry project and deployed model. Only console hosts run locally during the talk; API, dashboard, and MCP servers stay deployed.
 
 The script sets `Foundry:Credential` to `AzureCliCredential` so the local agents use the Azure CLI login above. For existing local settings, add `"Credential": "AzureCliCredential"` inside `Foundry` in each console project's `appsettings.Development.json`. Without this setting, `DefaultAzureCredential` may select a different cached IDE identity or tenant, causing Foundry to return `Workspace not found` even for a valid project endpoint. Use `DefaultAzureCredential` explicitly when its credential chain is intended.
 
@@ -54,10 +56,39 @@ dotnet run --project src/OpsBot.NoTools -- --ask "What's wrong with inventory, w
 dotnet run --project src/OpsBot.Tools   -- --ask "..."
 dotnet run --project src/OpsBot.Mcp     -- --ask "..."                                    # Mcp:Endpoint from config
 dotnet run --project src/OpsBot.Mcp     -- --compare <opsdesk-code-apim-url> <opsdesk-tasks-apim-url> --ask "..."
-dotnet run --project src/OpsBot.Mcp     -- --Mcp:Endpoint https://<apim>/opsdesk-secure/mcp --Mcp:Auth entra
+dotnet run --project src/OpsBot.Enterprise
 ```
 
 Flags: `--ask "<question>"` one shot · `--permissions ask|auto` (default `ask`: write tools prompt `[y]es / [n]o / [a]lways`) · `--compare <a> <b>`.
+
+These are rehearsal flags for the first three hosts, not the on-stage script. `OpsBot.Enterprise` is interactive only and has no local permission gate: its secure catalog has no writes.
+
+### Demo 3
+
+Run `.\scripts\demo3.ps1 -BaseName "<base-name>"` for labeled endpoint-shaped (yellow) and task-shaped (cyan) panes. Type the same inventory briefing into both. `stats` shows cumulative calls, turns, input/output tokens and wall time; `reset-stats` clears those totals without changing the conversation.
+
+For the typo demonstration, request an incident for `inventry`, approve the attempted write, then confirm `inventory` only after the server's suggestion. A corrected retry requires a second write approval; the server must not silently correct a write target.
+
+Run `.\scripts\demo3-measure.ps1 -BaseName "<base-name>"` separately for the read-only measurement report in `docs\demo3-measurements.md`. It requires actual model usage for both runs and refuses to write a zero-token or failed measurement.
+
+Measured against the deployed endpoints with `gpt-4o` on 2026-11-19:
+
+| Metric | Endpoint-shaped | Task-shaped |
+|---|---:|---:|
+| Tools / catalogue tokens | 10 / 590 | 5 / 520 |
+| Tool calls / model turns | 4 / 2 | 1 / 2 |
+| Input / output tokens | 3033 / 331 | 2888 / 190 |
+| Wall time (s) | 10.08 | 13.29 |
+
+These are observed results, not latency guarantees: fewer tool calls did not make the task-shaped run faster in this sample. See [validation evidence](docs/demo-validation.md) for all four demos and the remaining desktop-only checks.
+
+### Demo 4
+
+`.\scripts\demo4.ps1 -BaseName "<base-name>" -Mode normal` launches the interactive Enterprise host. Other modes: `no-key`, `no-token`, `norole`, `open`, and `discover`. Failed connections remain visible; use `reconnect` or `exit`. A normal secure connection discovers exactly five read tools, answers the briefing, and cannot create an incident. The all-systems question hits the dedicated six-tool-call/minute gateway budget and yields a partial answer explaining the limit.
+
+`--open` selects the eleven-tool Demo 2 twin. Both endpoints reuse the existing `demo-open` product/key and Application Insights setup; only the dedicated secure endpoint has JWT validation, curation, the per-agent rate budget, and its API-scoped diagnostics. `--discover opsdesk-apim-secure` resolves the runtime from API Center using the Azure CLI identity, independent of `Mcp:Endpoint`. Each answer prints its question trace ID; substitute it and your existing App Insights resource names in `scripts\demo4-trace.kql`.
+
+For an existing Demo 1/2 deployment, run `configure-apim.ps1` with `-EnterpriseOnly`: it leaves their gateway resources and local settings untouched. The full setup preserves existing generated MCP APIs because replacing one clears its tool collection. `-RefreshApi` explicitly reimports the otherwise frozen REST API.
 
 ### Demo 2 in VS Code
 
@@ -70,9 +101,9 @@ This file uses VS Code's editor-managed MCP input prompts. On builds that distin
 ## Folders
 
 - `.vscode/` – workspace-discovered `mcp.json` for Demo 2; prompts for the APIM name and subscription key
-- `apim/` – click-path for *Expose API as MCP server*, `policy-backend.xml`, `policy-mcp-auth.xml`, `policy-mcp-governance.xml`
+- `apim/` – API/MCP route documentation, `policy-backend.xml`, `policy-mcp-secure.xml`
 - `infra/` – `main.bicep` (Linux App Service ×4, APIM, API Center, paired Log Analytics/App Insights), `deploy-apps.ps1`, `postdeploy.ps1`, `entra.md`
-- `vscode/` – `mcp.json` (Azure endpoints: `opsdesk-code`, `opsdesk-tasks`, `opsdesk-apim`, `opsdesk-secure`), `mcp.local.json`
+- `vscode/` – MCP connection templates; `mcp.local.json` is for rehearsal only
 - `scripts/` – `urls.ps1`, `reset.ps1`, `demo1–4.ps1`, `tokens.ps1`, `appinsights.kql`, `demo4-expected.md`
 - `fallback/` – recordings (git-ignored)
 
@@ -88,11 +119,12 @@ $FoundryProjectEndpoint = "<foundry-project-endpoint>"
 az deployment group validate --subscription $SubscriptionId -g $ResourceGroup -n main -f infra/main.bicep -p infra/main.bicepparam
 az deployment group create --subscription $SubscriptionId -g $ResourceGroup -n main -f infra/main.bicep -p infra/main.bicepparam
 .\infra\deploy-apps.ps1 -SubscriptionId $SubscriptionId -ResourceGroup $ResourceGroup -BaseName $BaseName
+.\infra\configure-entra.ps1 -TenantId "<tenant-id>"
 .\infra\configure-apim.ps1 -SubscriptionId $SubscriptionId -ResourceGroup $ResourceGroup -BaseName $BaseName -FoundryProjectEndpoint $FoundryProjectEndpoint
-.\infra\postdeploy.ps1 -SubscriptionId $SubscriptionId -ResourceGroup $ResourceGroup -BaseName $BaseName -TenantId "<tenant-id>" -McpResourceAppId "<resource-app-id>"
+.\infra\postdeploy.ps1 -SubscriptionId $SubscriptionId -ResourceGroup $ResourceGroup -BaseName $BaseName
 ```
 
-The App Service plan and Developer APIM are billable resources. The Bicep deployment provisions infrastructure; the next script publishes the four applications, and `postdeploy.ps1` configures APIM/API Center.
+The App Service plan and Developer APIM are billable. Bicep provisions infrastructure, `deploy-apps.ps1` publishes apps, `configure-entra.ps1` provisions demo identities, `configure-apim.ps1` configures gateway controls, and `postdeploy.ps1` registers API Center metadata. Use `deploy-apps.ps1 -AppNames mcp-tasks` to deploy just that changed server.
 
 Demo helper scripts derive deployed URLs from the base name. Pass the same value used at deployment, for example `.\scripts\demo1.ps1 -BaseName "<base-name>"` or `.\scripts\reset.ps1 -BaseName "<base-name>"`.
 
@@ -104,9 +136,7 @@ Demo helper scripts derive deployed URLs from the base name. Pass the same value
 
 ## Package versions
 
-Pinned in the `.csproj` files to versions that restore together (.NET 10, `ModelContextProtocol` 1.2.0, Agent Framework 1.0 preview).
-New in this branch: `Microsoft.ML.Tokenizers` (+ `Data.O200kBase`), OpenTelemetry + Azure Monitor exporter/distro. If `dotnet restore`
-rejects a version, bump it in the referencing project; the API surface used is documented inline.
+Exact versions are pinned in the `.csproj` files (.NET 10, MCP 2.4.0, Agent Framework 1.28.0). Real response usage feeds the scorecards; `Microsoft.ML.Tokenizers` estimates catalog size. OpenTelemetry/Azure Monitor export the console and MCP traces. The Demo 3/4 hosts bound output-token reservation to 1200 by default (`Foundry:MaxOutputTokens` overrides it); the earlier hosts retain their existing defaults.
 
 ---
 *Community demo material. Review product names and preview-feature availability (APIM MCP servers, API Center MCP type, Entra Agent ID) before reuse.*

@@ -7,7 +7,7 @@ All OpsDesk routes are published through `apim-<base-name>`. Every route require
 | `opsdesk-code` | 2, 3 | product `demo-open` subscription key | Endpoint-shaped MCP server |
 | `opsdesk-tasks` | 3 | product `demo-open` subscription key | Task-shaped MCP server |
 | `opsdesk-apim` | 2 | product `demo-open` subscription key | MCP tools mapped to OpsDesk API operations |
-| `opsdesk-secure` | 4 | subscription key + Entra JWT + governance policy | Task-shaped MCP server |
+| `opsdesk-apim-secure` | 4 | shared `demo-open` key + Entra `Ops.Agent` + six tool calls/minute/agent | Five curated GET operations from the same API |
 
 ## Configure API and MCP routes
 
@@ -17,16 +17,22 @@ Run `.\infra\configure-apim.ps1` after the API and MCP App Services are deployed
 
 The key is never printed. `OpsBot.Tools` sends it as `Ocp-Apim-Subscription-Key`; `OpsBot.Mcp` sends it for every APIM MCP call. `vscode/mcp.json` prompts for the same key.
 
-## Demo 4 – opsdesk-secure, configured beforehand
+## Demo 4 – curated enterprise twin
 
-Create only after the Entra resource app, role assignments, and service identities are configured by `infra/entra.md`. The route must require both the `demo-open` subscription key and a valid role-bearing JWT; do not turn off subscription validation.
+Run `infra\configure-entra.ps1` first (see `infra\entra.md`), then `configure-apim.ps1 -EnterpriseOnly` with its required deployment parameters. The dedicated secure route reuses the existing `demo-open` product/key but additionally requires a valid `Ops.Agent` token. Subscription validation stays enabled. The open twin and existing MCP backends are unchanged.
 
 | Control | Config to show | Action to show |
 |---|---|---|
-| Security | policy editor: `validate-jwt`, audience `api://opsdesk-mcp`, roles | subscription-key-only `tools/list` → 401; Copilot/OpsBot.Mcp with Reader token answers |
-| Governance | same policy: `rate-limit-by-key`, write-tool/role check | Reader raises incident → policy message; Operator → incident on dashboard |
-| Discoverability | API Center entry `opsdesk-secure` (type MCP, owner, version, endpoint, metadata) | copy endpoint from API Center into `mcp.json` |
-| Observability | API → Diagnostics: App Insights, 100 % sampling, W3C correlation | end-to-end transaction APIM → MCP server → API |
+| Security | `policy-mcp-secure.xml`: JWT audience/issuer, role check | No key → 401; no token → 401; no role → 403; normal Enterprise connection works |
+| Curation | Five GET tools; no incident creation/notification or status mutation | Write prompt gets a read-only explanation; dashboard unchanged |
+| Rate budget | Named values, `tools/call` only, counter keyed by token `azp` | Seventh call returns HTTP 200 JSON-RPC `isError`; model explains the limit |
+| Discoverability | API Center entry: owner, version, environment, runtime, metadata | `OpsBot.Enterprise --discover opsdesk-apim-secure` |
+| Observability | Secure API diagnostics: App Insights, 100 %, W3C, traceparent only | Question trace joins agent → APIM → API across two resources |
 
-Order inside `<inbound>` when merged: `validate-jwt` first (sets `jwt`), then rate limit, then the tool check.
-Subscription keys off on `opsdesk-secure` so there is one identity model.
+Inbound order is subscription validation, JWT validation, role check, then the tool-call budget. Initialization, notifications, and tool discovery do not consume the budget. The policy does not overwrite `traceparent`; diagnostics never log authorization headers, keys, or bodies.
+
+Isolation is endpoint-scoped, not key-scoped: the counter includes `opsdesk-apim-secure` plus the token's agent identity, and only that API has the policy and diagnostics. Existing App Insights resources are reused. Exhausting Demo 4's budget must not affect `opsdesk-code`, `opsdesk-tasks`, or `opsdesk-apim`.
+
+Generated MCP tool resource IDs are prefixed with `secure-` because this APIM preview requires IDs to be globally unique across servers; the tool display names still describe the same GET operations. Existing generated APIs are not replaced on reruns, since a PUT would erase their tool collection.
+
+`postdeploy.ps1` registers the secure server in API Center. `scripts\demo4-ratelimit.ps1 -BaseName "<base-name>" -Show` displays the live budget; the optional burst helper verifies the error shape. Use `demo4-trace.kql` and `demo4-tools.kql` with your own App Insights names.

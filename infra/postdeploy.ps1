@@ -1,59 +1,46 @@
-# Post-deploy: import the OpsDesk API into APIM, apply policies, register in API Center, print laptop config.
-# MCP-server creation in APIM is still portal-driven in many tenants – this script prints the exact steps
-# when the REST call is not available (see apim/README.md). Requires: az CLI (az login), Bicep deployed.
 param(
   [Parameter(Mandatory)][string]$SubscriptionId,
   [Parameter(Mandatory)][string]$ResourceGroup,
-  [Parameter(Mandatory)][string]$BaseName,
-  [Parameter(Mandatory)][string]$TenantId,
-  [Parameter(Mandatory)][string]$McpResourceAppId      # app-opsdesk-mcp (api://opsdesk-mcp)
+  [Parameter(Mandatory)][string]$BaseName
 )
 $ErrorActionPreference = "Stop"
-$apim = "apim-$BaseName"; $apic = "apic-$BaseName"
-$outJson = az deployment group show --subscription $SubscriptionId -g $ResourceGroup -n main --query properties.outputs -o json
-if ($LASTEXITCODE) { throw "Could not read the Bicep deployment outputs for '$ResourceGroup'." }
-$out = $outJson | ConvertFrom-Json
-$apiUrl = $out.apiUrl.value; $tasksUrl = $out.mcpTasksUrl.value
-
-Write-Host "1. Import OpsDesk API" -ForegroundColor Cyan
-az apim api import --subscription $SubscriptionId -g $ResourceGroup -n $apim --path opsdesk --api-id opsdesk-api --display-name "OpsDesk API" `
-  --specification-format OpenApiJson --specification-url "$apiUrl/openapi/v1.json" --service-url $apiUrl | Out-Null
-if ($LASTEXITCODE) { throw "Could not import the OpsDesk API into '$apim'." }
-
-Write-Host "2. Named values for the policies" -ForegroundColor Cyan
-az apim nv create --subscription $SubscriptionId -g $ResourceGroup -n $apim --named-value-id tenant-id --display-name tenant-id --value $TenantId | Out-Null
-if ($LASTEXITCODE) { throw "Could not create the tenant-id named value in '$apim'." }
-az apim nv create --subscription $SubscriptionId -g $ResourceGroup -n $apim --named-value-id opsdesk-mcp-app-id --display-name opsdesk-mcp-app-id --value $McpResourceAppId | Out-Null
-if ($LASTEXITCODE) { throw "Could not create the MCP app ID named value in '$apim'." }
-
-Write-Host "3. Policies (merged auth + governance for opsdesk-secure)" -ForegroundColor Cyan
-Write-Host "   → open APIM → MCP Servers → opsdesk-secure → Policies and paste apim/policy-mcp-auth.xml inbound first, then apim/policy-mcp-governance.xml."
-Write-Host "   (The MCP-server policy scope has no stable CLI yet; the API-scope policy can be set with: az apim api policy ...)"
-
-Write-Host "4. MCP servers" -ForegroundColor Cyan
-Write-Host "   → APIM → APIs → MCP Servers → Create: 'opsdesk-apim' (expose OpsDesk API, all operations, product demo-open)"
-Write-Host "   → Run infra/configure-apim.ps1 for the key-protected API and passthrough MCP routes."
-Write-Host "   → APIM → APIs → MCP Servers → Create: 'opsdesk-secure' (pass-through to $tasksUrl), subscription required = on; then apply Entra and governance policies."
-
-Write-Host "5. API Center registration" -ForegroundColor Cyan
-az apic api create --subscription $SubscriptionId -g $ResourceGroup -n $apic --api-id opsdesk-secure --title "OpsDesk MCP (secure)" --type mcp `
-  --custom-properties '{"owner":"Platform Ops","dataClassification":"internal","writeTools":"raise_incident, update_system_status"}'
-if ($LASTEXITCODE) { throw "Could not register the secure MCP API in '$apic'." }
-az apic api version create --subscription $SubscriptionId -g $ResourceGroup -n $apic --api-id opsdesk-secure --version-id v1 --title "1.0" --lifecycle-stage production
-if ($LASTEXITCODE) { throw "Could not register the MCP API version in '$apic'." }
-az apic environment create --subscription $SubscriptionId -g $ResourceGroup -n $apic --environment-id demo --title "Demo" --type testing
-if ($LASTEXITCODE) { throw "Could not register the demo environment in '$apic'." }
-az apic api deployment create --subscription $SubscriptionId -g $ResourceGroup -n $apic --api-id opsdesk-secure --version-id v1 --definition-id openapi `
-  --deployment-id apim --title "APIM gateway" --environment-id /workspaces/default/environments/demo `
-  --server "{\"runtimeUri\":[\"$($out.apimGateway.value)/opsdesk-secure/mcp\"]}"
-if ($LASTEXITCODE) { throw "Could not register the APIM deployment in '$apic'." }
-
-Write-Host "6. Diagnostics" -ForegroundColor Cyan
-Write-Host "   → APIM → APIs → OpsDesk API → Settings → Diagnostics: App Insights logger 'appinsights', sampling 100 %, correlation W3C."
-
-Write-Host "`nLocal configuration (use appsettings.Development.json; never commit subscription keys or credentials):" -ForegroundColor Green
-@"
-Run infra/configure-apim.ps1 to populate the local APIM URLs and subscription key.
-Set Foundry:ProjectEndpoint and Foundry:DeploymentName in each local agent appsettings.Development.json.
-Set Mcp:Entra identities in src/OpsBot.Mcp/appsettings.Development.json (see infra/entra.md).
-"@
+. "$PSScriptRoot\local-settings.ps1"
+$version = "2024-03-01"
+$center = "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroup/providers/Microsoft.ApiCenter/services/apic-$BaseName"
+$workspace = "$center/workspaces/default"
+$apiId = "opsdesk-apim-secure"
+$api = "$workspace/apis/$apiId"
+$endpoint = "https://apim-$BaseName.azure-api.net/$apiId/mcp"
+$metadata = @{
+  owner = "Platform Ops"
+  dataClassification = "internal"
+  toolsExposed = "read-only"
+  rateLimit = "6 tool calls/min per agent"
+}
+foreach ($key in $metadata.Keys) {
+  $schema = @{ type = "string"; title = $key } | ConvertTo-Json -Compress
+  $null = Invoke-DemoRest "PUT" "$center/metadataSchemas/${key}?api-version=$version" @{
+    properties = @{ schema = $schema; assignedTo = @(@{ entity = "api"; required = $false; deprecated = $false }) }
+  }
+}
+$null = Invoke-DemoRest "PUT" "${api}?api-version=$version" @{
+  properties = @{ title = "OpsDesk MCP (curated enterprise)"; kind = "mcp"
+    description = "Read-only OpsDesk MCP tools with Entra authorization and a per-agent rate budget."
+    customProperties = $metadata }
+}
+$null = Invoke-DemoRest "PUT" "$api/versions/v1?api-version=$version" @{
+  properties = @{ title = "1.0"; lifecycleStage = "production" }
+}
+$null = Invoke-DemoRest "PUT" "$api/versions/v1/definitions/mcp?api-version=$version" @{
+  properties = @{ title = "Curated MCP tools"; description = "Five read-only tools generated by API Management." }
+}
+$null = Invoke-DemoRest "PUT" "$workspace/environments/demo?api-version=$version" @{
+  properties = @{ title = "Demo"; kind = "testing"; server = @{ managementPortalUri = @("https://portal.azure.com") } }
+}
+$null = Invoke-DemoRest "PUT" "$api/deployments/apim?api-version=$version" @{
+  properties = @{ title = "APIM gateway"; state = "active"
+    environmentId = "/workspaces/default/environments/demo"
+    definitionId = "/workspaces/default/apis/$apiId/versions/v1/definitions/mcp"
+    server = @{ runtimeUri = @($endpoint) } }
+}
+Write-Host "API Center: $apiId, version 1.0, environment demo, APIM runtime, and governance metadata registered." -ForegroundColor Green
