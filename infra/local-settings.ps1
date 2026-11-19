@@ -2,9 +2,6 @@ function Update-LocalSettings([string]$Path, [System.Collections.IDictionary]$Se
   if ([System.IO.Path]::GetFileName($Path) -ne "appsettings.Development.json") {
     throw "Local credentials must be written only to appsettings.Development.json."
   }
-  $current = if (Test-Path -LiteralPath $Path) {
-    Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json -AsHashtable
-  } else { @{} }
   function Merge-Settings([System.Collections.IDictionary]$Target, [System.Collections.IDictionary]$Patch) {
     foreach ($key in $Patch.Keys) {
       if ($Patch[$key] -is [System.Collections.IDictionary] -and $Target[$key] -is [System.Collections.IDictionary]) {
@@ -13,6 +10,13 @@ function Update-LocalSettings([string]$Path, [System.Collections.IDictionary]$Se
         $Target[$key] = $Patch[$key]
       }
     }
+  }
+  $templatePath = [System.IO.Path]::Combine([System.IO.Path]::GetDirectoryName($Path), "appsettings.json")
+  $current = if (Test-Path -LiteralPath $templatePath) {
+    Get-Content -LiteralPath $templatePath -Raw | ConvertFrom-Json -AsHashtable
+  } else { @{} }
+  if (Test-Path -LiteralPath $Path) {
+    Merge-Settings $current (Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json -AsHashtable)
   }
   Merge-Settings $current $Settings
   $current | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath $Path -Encoding utf8
