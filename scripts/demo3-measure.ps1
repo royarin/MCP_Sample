@@ -4,7 +4,7 @@ $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot\urls.ps1" -BaseName $BaseName -UniqueSuffix $UniqueSuffix
 $root = Split-Path $PSScriptRoot -Parent
 $project = Join-Path $root 'src\OpsBot.Mcp'
-$report = Join-Path $root 'docs\demo3-measurements.md'
+$report = Join-Path $root 'artifacts\demo3-measurements.md'
 $output = @(& dotnet run --no-build --project $project -- --compare $McpCode $McpTasks --permissions auto --ask $Question --measurement true)
 $exitCode = $LASTEXITCODE
 $output | ForEach-Object { Write-Host $_ }
@@ -43,5 +43,6 @@ Endpoints: ``https://<apim-host>/opsdesk-code/mcp`` and ``https://<apim-host>/op
 | Output tokens | $($data.Runs[0].OutputTokens) | $($data.Runs[1].OutputTokens) |
 | Wall time (s) | $($seconds[0]) | $($seconds[1]) |
 "@
+$null = New-Item -ItemType Directory -Path (Split-Path -Parent $report) -Force
 Set-Content -LiteralPath $report -Value $reportText -Encoding utf8
 Write-Host "Wrote $report"

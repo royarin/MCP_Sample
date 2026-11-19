@@ -284,10 +284,10 @@ The top-level switches are real configuration keys read by this host. They let y
 |---|---|
 | An edit appears to do nothing | Stop, save, build/start the correct project. Check for higher-precedence environment/user-secret settings; do not improvise command-line overrides. |
 | Wrong tool count | Check the endpoint: code 10, tasks 5, open-generated 11, secure-generated 5. Enable only one server in Copilot. |
-| A later briefing reports incidents | Expected: Demo 2 and Demo 3 created them. Do not claim a clean incident list after those writes. |
+| A later briefing reports incidents | Expected: Demo 2 created one. Demo 3 only reads the current state; do not claim a clean incident list. |
 | The rate limit fires on a briefing | Wait for the tool window to expire; the secure budget is shared by this agent identity across its sessions. Restarting the host does not reset it. |
 | A permission prompt appears | Review the target and type `y` only for the intended write. Never choose "always" for this presentation. |
 | Copilot or the model behaves differently | Describe what actually happened. Show the discovered tool/policy evidence; do not promise exact wording, turn counts or latency. |
-| Network or trace ingestion stalls | Use the dated measurements, recorded validation evidence or prepared portal view and label it as a fallback. |
+| Network or trace ingestion stalls | Use the dated measurements in `README.md` or a prepared portal view and label it as a fallback. |
 
-Reference material: `DEMO-MANUAL.md` for technical operation, `demo-validation.md` for measured acceptance evidence, and `demo3-measurements.md` for the dated scorecard.
+Reference material: `DEMO-MANUAL.md` for technical operation and the repository's `README.md` for dated measurement figures.
