@@ -8,12 +8,14 @@ public static class Ui
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
-    public static void Banner(string title, IList<AITool>? tools)
+    public static void Banner(string title, IList<AITool>? tools, ConsoleColor? accent = null, bool showPermissionMessage = true)
     {
         Console.OutputEncoding = System.Text.Encoding.UTF8;
-        Console.ForegroundColor = ConsoleColor.DarkYellow;
+        Console.ForegroundColor = accent ?? ConsoleColor.DarkYellow;
         Console.WriteLine();
-        Console.WriteLine($"══ {title} ".PadRight(78, '═'));
+        var heading = $"══ {title} ";
+        if (heading.Length > 100) heading = heading[..97] + "...";
+        Console.WriteLine(heading.PadRight(78, '═'));
         Console.ResetColor();
         Console.ForegroundColor = ConsoleColor.DarkGray;
         if (tools is null || tools.Count == 0) Console.WriteLine("   tools: none");
@@ -24,18 +26,25 @@ public static class Ui
             {
                 var desc = t is AIFunction f ? f.Description : "";
                 desc = desc.Replace("\r", " ").Replace("\n", " ");
-                if (desc.Length > 72) desc = desc[..69] + "...";
+                var name = t.Name.Length > 28 ? t.Name[..25] + "..." : t.Name;
+                var available = 100 - 7 - Math.Max(28, name.Length) - 1;
+                if (desc.Length > available) desc = desc[..(available - 3)] + "...";
                 var mark = t is AIFunction g && PermissionGate.IsWriteTool(g.Name) ? "✎" : "•";
-                Console.WriteLine($"     {mark} {t.Name,-28} {desc}");
+                Console.WriteLine($"     {mark} {name,-28} {desc}");
             }
-            Console.WriteLine("     ✎ = write tool, asks for permission before running");
+            if (showPermissionMessage) Console.WriteLine("     ✎ = write tool, asks for permission before running");
         }
         Console.ResetColor();
-        Console.WriteLine("   type a question, or 'exit'");
+        Console.WriteLine("   type a question, 'stats', 'reset-stats', or 'exit'");
         Console.WriteLine();
     }
 
-    public static void PromptMarker() { Console.ForegroundColor = ConsoleColor.Cyan; Console.Write("You: "); Console.ResetColor(); }
+    public static void PromptMarker(string? label = null, ConsoleColor? accent = null)
+    {
+        Console.ForegroundColor = accent ?? ConsoleColor.Cyan;
+        Console.Write(string.IsNullOrWhiteSpace(label) ? "You: " : $"You [{label}]: ");
+        Console.ResetColor();
+    }
 
     public static void ToolCall(FunctionCallContent call)
     {
@@ -47,18 +56,46 @@ public static class Ui
 
     public static void ToolResult(FunctionResultContent result)
     {
-        Console.ForegroundColor = ConsoleColor.DarkYellow;
         var text = result.Result switch
         {
+            null when result.Exception is not null => result.Exception.Message,
             null => "(null)",
             string s => s,
+            TextContent content => content.Text,
             JsonElement je => je.GetRawText(),
             _ => JsonSerializer.Serialize(result.Result, Json)
         };
+        text = ReadMcpText(text);
+        if (result.Exception is { } error && result.Result is not null)
+            text += $" · {ReadMcpText(error.Message)}";
         text = text.Replace("\r", " ").Replace("\n", " ");
+        var rateLimited = text.Contains("Rate limit exceeded", StringComparison.OrdinalIgnoreCase);
+        Console.ForegroundColor = rateLimited ? ConsoleColor.Red : ConsoleColor.DarkYellow;
+        if (rateLimited) Console.WriteLine("  ✖ Rate limit exceeded");
         if (text.Length > 220) text = text[..217] + "...";
         Console.WriteLine($"  ← {text}");
         Console.ResetColor();
+    }
+
+    private static string ReadMcpText(string text)
+    {
+        if (!text.TrimStart().StartsWith('{')) return text;
+        try
+        {
+            using var json = JsonDocument.Parse(text);
+            if (json.RootElement.TryGetProperty("content", out var content) && content.ValueKind == JsonValueKind.Array)
+            {
+                var parts = content.EnumerateArray()
+                    .Where(p => p.TryGetProperty("type", out var type) && type.GetString() == "text")
+                    .Select(p => p.GetProperty("text").GetString()).ToArray();
+                if (parts.Length > 0) return string.Join(" ", parts);
+            }
+        }
+        catch (JsonException)
+        {
+            // Exception messages can start with '{' without being JSON; retain the original text.
+        }
+        return text;
     }
 
     public static char AskPermission(string tool, string args)
@@ -68,8 +105,17 @@ public static class Ui
         Console.WriteLine($"  ⚠  {tool} wants to run with {args}");
         Console.Write("     Allow?  [y]es / [n]o / [a]lways for this tool › ");
         Console.ResetColor();
-        var key = Console.ReadKey(intercept: true).KeyChar;
-        Console.WriteLine(key);
+        char key;
+        if (Console.IsInputRedirected)
+        {
+            var input = Console.ReadLine();
+            key = string.IsNullOrWhiteSpace(input) ? '\0' : input.Trim()[0];
+        }
+        else
+        {
+            key = Console.ReadKey(intercept: true).KeyChar;
+            Console.WriteLine(key);
+        }
         return char.ToLowerInvariant(key);
     }
 

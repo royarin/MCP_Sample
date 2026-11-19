@@ -43,7 +43,7 @@ public static class AgentConfig
             .GetProjectResponsesClientForModel(Deployment(c))
             .AsIChatClient(Deployment(c));
 #pragma warning restore AAIP002, OPENAI001
-        return new ToolTraceChatClient(inner, meter);
+        return new ToolTraceChatClient(inner, meter, c.GetValue<int?>("Foundry:MaxOutputTokens") ?? 1200);
     }
 
     public static TokenCredential CreateCredential(

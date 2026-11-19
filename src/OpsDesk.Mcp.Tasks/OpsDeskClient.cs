@@ -51,7 +51,9 @@ public sealed class OpsDeskClient(IHttpClientFactory factory)
         var exact = known.FirstOrDefault(k => k.Equals(systemId?.Trim(), StringComparison.OrdinalIgnoreCase));
         if (exact is not null) return exact;
         var best = known.Select(k => (k, d: Levenshtein(k, systemId ?? ""))).OrderBy(x => x.d).FirstOrDefault();
-        var hint = best.k is not null && best.d <= 3 ? $" Did you mean '{best.k}'?" : $" Known systems: {string.Join(", ", known)}.";
+        var hint = best.k is not null && best.d <= 3
+            ? $" Did you mean '{best.k}'? Ask the user to confirm the corrected system id before retrying."
+            : $" Known systems: {string.Join(", ", known)}.";
         throw new McpException($"Unknown system '{systemId}'.{hint}");
     }
 
