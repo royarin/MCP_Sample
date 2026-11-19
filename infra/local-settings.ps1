@@ -18,13 +18,18 @@ function Update-LocalSettings([string]$Path, [System.Collections.IDictionary]$Se
   $current | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath $Path -Encoding utf8
 }
 
-function Invoke-DemoRest([string]$Method, [string]$Uri, [object]$Body) {
+function Invoke-DemoRest([string]$Method, [string]$Uri, [object]$Body, [hashtable]$Headers = @{}) {
   $path = Join-Path ([System.IO.Path]::GetTempPath()) "opsdesk-rest-$([guid]::NewGuid().ToString('N')).json"
   try {
     $arguments = @("rest", "--method", $Method, "--url", $Uri, "--only-show-errors", "-o", "json")
     if ($null -ne $Body) {
       $Body | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $path -Encoding utf8
-      $arguments += @("--body", "@$path", "--headers", "Content-Type=application/json")
+      $arguments += @("--body", "@$path")
+      $Headers = @{ "Content-Type" = "application/json" } + $Headers
+    }
+    if ($Headers.Count -gt 0) {
+      $arguments += "--headers"
+      foreach ($header in $Headers.GetEnumerator()) { $arguments += "$($header.Key)=$($header.Value)" }
     }
     $result = & az @arguments
     if ($LASTEXITCODE -ne 0) { throw "Azure REST $Method failed." }

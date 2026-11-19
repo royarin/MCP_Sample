@@ -77,6 +77,9 @@ function Set-GeneratedMcpServer([string]$Id, [hashtable]$Properties) {
     $current = ($existingJson | ConvertFrom-Json).properties
     if ($current.type -eq "mcp" -and $current.path -eq $Properties.path -and $current.subscriptionRequired) {
       # Replacing a generated MCP API clears its tool collection, even for an identical PUT.
+      if ($current.displayName -ne $Properties.displayName) {
+        $null = Invoke-DemoRest "PATCH" $uri @{ properties = @{ displayName = $Properties.displayName } } @{ "If-Match" = "*" }
+      }
       return
     }
   }
@@ -128,7 +131,7 @@ $specification.PSObject.Properties.Remove("jsonSchemaDialect")
 Convert-NullableTypes $specification
 $specificationPath = Join-Path $env:TEMP "opsdesk-api-apim.openapi.json"
 $specification | ConvertTo-Json -Depth 100 | Set-Content -Path $specificationPath -Encoding utf8
-az apim api import -g $ResourceGroup -n $ApimName --api-id opsdesk-api --path opsdesk --display-name "OpsDesk API" `
+az apim api import -g $ResourceGroup -n $ApimName --api-id opsdesk-api --path opsdesk --display-name "opsdesk-api" `
   --protocols https --subscription-required true --specification-format OpenApiJson `
   --specification-path $specificationPath --service-url $ApiUrl --only-show-errors -o none
 $importExitCode = $LASTEXITCODE
@@ -136,6 +139,10 @@ Remove-Item -LiteralPath $specificationPath -Force -ErrorAction SilentlyContinue
 if ($importExitCode -ne 0) { throw "Could not import OpsDesk API into APIM." }
 } else {
   Write-Host "Keeping the existing frozen OpsDesk API import." -ForegroundColor Cyan
+  if ($currentApi.displayName -ne "opsdesk-api") {
+    $null = Invoke-DemoRest "PATCH" "$baseUrl/apis/opsdesk-api?api-version=$apiVersion" `
+      @{ properties = @{ displayName = "opsdesk-api" } } @{ "If-Match" = "*" }
+  }
 }
 
 $apiProduct = az apim product api check -g $ResourceGroup -n $ApimName --product-id demo-open --api-id opsdesk-api -o tsv 2>$null
@@ -145,8 +152,8 @@ if ($LASTEXITCODE -ne 0 -or $apiProduct -ne "true") {
 }
 
 $servers = @(
-  @{ Id = "opsdesk-code"; Name = "OpsDesk endpoint tools"; Path = "opsdesk-code"; Backend = $McpCodeUrl },
-  @{ Id = "opsdesk-tasks"; Name = "OpsDesk task tools"; Path = "opsdesk-tasks"; Backend = $McpTasksUrl }
+  @{ Id = "opsdesk-code"; Name = "opsdesk-code"; Path = "opsdesk-code"; Backend = $McpCodeUrl },
+  @{ Id = "opsdesk-tasks"; Name = "opsdesk-tasks"; Path = "opsdesk-tasks"; Backend = $McpTasksUrl }
 )
 
 foreach ($server in $servers) {
@@ -162,7 +169,7 @@ foreach ($server in $servers) {
 $apiMcpBody = @{
   properties = @{
     type = "mcp"
-    displayName = "OpsDesk API tools"
+    displayName = "opsdesk-apim"
     description = "MCP tools generated from the subscription-protected OpsDesk REST API."
     path = "opsdesk-apim"
     protocols = @("https")
@@ -272,7 +279,7 @@ if ([string]::IsNullOrWhiteSpace($McpResourceAppId)) {
   throw "Run infra\configure-entra.ps1 first, or supply McpResourceAppId."
 }
 Set-GeneratedMcpServer "opsdesk-apim-secure" @{
-    type = "mcp"; displayName = "OpsDesk curated enterprise tools"
+    type = "mcp"; displayName = "opsdesk-apim-secure"
     description = "Read-only OpsDesk MCP tools protected by Entra identity and a per-agent budget."
     path = "opsdesk-apim-secure"; protocols = @("https"); subscriptionRequired = $true
 }
