@@ -9,7 +9,7 @@ namespace OpsBot.Shared;
 /// usage and model turns. Identical for hand-wired functions (OpsBot.Tools) and MCP tools (OpsBot.Mcp):
 /// the agent cannot tell where a capability comes from – which is the point of the demo.
 /// </summary>
-public sealed class ToolTraceChatClient(IChatClient inner, UsageMeter meter, int? maxOutputTokens = 1200) : DelegatingChatClient(inner)
+public sealed class ToolTraceChatClient(IChatClient inner, UsageMeter meter, int? maxOutputTokens = null) : DelegatingChatClient(inner)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     private readonly HashSet<string> _seenResults = [];

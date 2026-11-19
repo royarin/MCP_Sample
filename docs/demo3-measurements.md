@@ -11,6 +11,6 @@ Endpoints: `https://<apim-host>/opsdesk-code/mcp` and `https://<apim-host>/opsde
 | Catalogue tokens | 590 | 520 |
 | Tool calls | 4 | 1 |
 | Model turns | 2 | 2 |
-| Input tokens | 2939 | 2794 |
-| Output tokens | 288 | 217 |
-| Wall time (s) | 8.95 | 6.07 |
+| Input tokens | 3033 | 2888 |
+| Output tokens | 331 | 190 |
+| Wall time (s) | 10.08 | 13.29 |
