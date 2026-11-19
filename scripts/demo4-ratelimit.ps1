@@ -2,9 +2,12 @@ param(
   [Parameter(Mandatory)][string]$BaseName,
   [ValidateRange(1, 1000)][int]$Calls = 6,
   [ValidateRange(1, 300)][int]$Period = 60,
-  [switch]$Show
+  [switch]$Show,
+  [string]$UniqueSuffix = ""
 )
 $ErrorActionPreference = "Stop"
+. "$PSScriptRoot\..\infra\naming.ps1"
+$BaseName = Resolve-DemoBaseName $BaseName $UniqueSuffix
 $apim = "apim-$BaseName"
 $group = az apim list --query "[?name=='$apim'].resourceGroup | [0]" -o tsv --only-show-errors
 if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($group)) { throw "Could not resolve the demo APIM service." }

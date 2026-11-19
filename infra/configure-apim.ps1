@@ -7,10 +7,13 @@ param(
   [string]$TenantId,
   [string]$McpResourceAppId,
   [switch]$EnterpriseOnly,
-  [switch]$RefreshApi
+  [switch]$RefreshApi,
+  [string]$UniqueSuffix = ""
 )
 
 $ErrorActionPreference = "Stop"
+. "$PSScriptRoot\naming.ps1"
+$BaseName = Resolve-DemoBaseName $BaseName $UniqueSuffix
 $apiVersion = "2025-09-01-preview"
 $subscriptionApiVersion = "2022-08-01"
 $ApimName = "apim-$BaseName"

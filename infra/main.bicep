@@ -8,22 +8,28 @@
 param location string = resourceGroup().location
 @description('Region for Azure API Center, matching the source environment')
 param apiCenterLocation string = 'eastus'
-@description('Short name used in resource names')
+@description('Resource-name stem. Use uniqueSuffix for a caller-selected uniqueness component.')
+@minLength(1)
+@maxLength(45)
 param baseName string = 'opsdesk-demo'
+@description('Caller-selected lowercase suffix, such as a team or environment code. Leave empty only when baseName is already unique. Combined baseName-suffix must be at most 45 characters.')
+@maxLength(43)
+param uniqueSuffix string = ''
 @description('APIM tier; Developer matches the source demo environment')
 @allowed(['Developer', 'StandardV2', 'PremiumV2', 'Premium'])
 param apimSku string = 'Developer'
 param apimPublisherEmail string
 param apimPublisherName string = 'OpsDesk demo'
 
-var appsWorkspaceName = 'la-${baseName}-apps'
-var mcpWorkspaceName = 'la-${baseName}-mcp'
-var appsInsightsName = 'appi-${baseName}-apps'
-var mcpInsightsName = 'appi-${baseName}-mcp'
-var apiAppName = 'app-${baseName}-api'
-var webAppName = 'app-${baseName}-web'
-var mcpAppName = 'app-${baseName}-mcp'
-var mcpTasksAppName = 'app-${baseName}-mcp-tasks'
+var resourceStem = empty(uniqueSuffix) ? baseName : '${baseName}-${uniqueSuffix}'
+var appsWorkspaceName = 'la-${resourceStem}-apps'
+var mcpWorkspaceName = 'la-${resourceStem}-mcp'
+var appsInsightsName = 'appi-${resourceStem}-apps'
+var mcpInsightsName = 'appi-${resourceStem}-mcp'
+var apiAppName = 'app-${resourceStem}-api'
+var webAppName = 'app-${resourceStem}-web'
+var mcpAppName = 'app-${resourceStem}-mcp'
+var mcpTasksAppName = 'app-${resourceStem}-mcp-tasks'
 var apiEndpoint = 'https://${apiAppName}.azurewebsites.net'
 var webEndpoint = 'https://${webAppName}.azurewebsites.net'
 var mcpEndpoint = 'https://${mcpAppName}.azurewebsites.net/mcp'
@@ -64,7 +70,7 @@ resource mcpInsights 'Microsoft.Insights/components@2020-02-02' = {
 }
 
 resource appServicePlan 'Microsoft.Web/serverfarms@2025-03-01' = {
-  name: 'plan-${baseName}'
+  name: 'plan-${resourceStem}'
   location: location
   kind: 'linux'
   sku: {
@@ -108,7 +114,7 @@ resource webApps 'Microsoft.Web/sites@2025-03-01' = [for app in apps: {
 }]
 
 resource apim 'Microsoft.ApiManagement/service@2024-05-01' = {
-  name: 'apim-${baseName}'
+  name: 'apim-${resourceStem}'
   location: location
   sku: { name: apimSku, capacity: 1 }
   properties: { publisherEmail: apimPublisherEmail, publisherName: apimPublisherName }
@@ -131,11 +137,12 @@ resource apimNamedValues 'Microsoft.ApiManagement/service/namedValues@2024-05-01
 }
 
 resource apiCenter 'Microsoft.ApiCenter/services@2024-03-01' = {
-  name: 'apic-${baseName}'
+  name: 'apic-${resourceStem}'
   location: apiCenterLocation
   properties: {}
 }
 
+output resourceBaseName string = resourceStem
 output apiUrl string = apiEndpoint
 output webUrl string = webEndpoint
 output mcpUrl string = mcpEndpoint

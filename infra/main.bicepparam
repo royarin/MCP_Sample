@@ -1,6 +1,7 @@
 using './main.bicep'
 
-param baseName = 'opsdesk-demo'
+param baseName = readEnvironmentVariable('OPSDESK_BASE_NAME', 'opsdesk-demo')
+param uniqueSuffix = readEnvironmentVariable('OPSDESK_UNIQUE_SUFFIX', '')
 param location = 'swedencentral'
 param apiCenterLocation = 'eastus'
 param apimSku = 'Developer'

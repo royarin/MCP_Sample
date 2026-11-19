@@ -1,7 +1,7 @@
 # Demo 3: launch two interactive hosts; servers are already deployed.
-param([Parameter(Mandatory)][string]$BaseName)
+param([Parameter(Mandatory)][string]$BaseName, [string]$UniqueSuffix = "")
 $ErrorActionPreference = 'Stop'
-. "$PSScriptRoot\urls.ps1" -BaseName $BaseName
+. "$PSScriptRoot\urls.ps1" -BaseName $BaseName -UniqueSuffix $UniqueSuffix
 $root = Split-Path $PSScriptRoot -Parent
 $project = Join-Path $root 'src\OpsBot.Mcp'
 $endpointArgs = @('run', '--no-build', '--project', $project, '--', '--Mcp:Endpoint', $McpCode, '--label', 'endpoint-shaped', '--accent', 'yellow')

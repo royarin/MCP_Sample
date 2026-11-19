@@ -43,7 +43,7 @@ Headline question (seed data: `inventory` is **Red**):
 az login --tenant "<tenant-id>"
 .\infra\configure-entra.ps1 -TenantId "<tenant-id>"
 .\infra\configure-apim.ps1 -SubscriptionId "<subscription-id>" -ResourceGroup "<resource-group>" `
-  -BaseName "<base-name>" -FoundryProjectEndpoint "<foundry-project-endpoint>"
+  -BaseName "opsdesk-demo" -UniqueSuffix "<unique-suffix>" -FoundryProjectEndpoint "<foundry-project-endpoint>"
 dotnet build MCP_Sample.slnx
 ```
 
@@ -109,24 +109,37 @@ This file uses VS Code's editor-managed MCP input prompts. On builds that distin
 
 ## Azure provisioning
 
-The templates create a Linux P0v3 App Service plan, four .NET 10 apps, Developer APIM, API Center Free in East US, and separate Log Analytics/App Insights pairs for the apps and MCP servers. The APIM publisher address in `infra/main.bicepparam` is a placeholder; replace it with a monitored address before provisioning. Subscription, resource-group, tenant, base-name, and Foundry endpoint values are supplied at deployment time, not stored in the repository.
+The templates create a Linux P0v3 App Service plan, four .NET 10 apps, Developer APIM, API Center Free in East US, and separate Log Analytics/App Insights pairs for the apps and MCP servers. The APIM publisher address in `infra\main.bicepparam` is a placeholder; replace it with a monitored address before provisioning. Tenant, subscription, resource group, name stem, uniqueness suffix and Foundry endpoint are caller inputs, not personal deployment values stored in the repository.
 
 ```powershell
+$TenantId = "<tenant-id>"
 $SubscriptionId = "<subscription-id>"
 $ResourceGroup = "<resource-group>"
-$BaseName = "<base-name>"
+$BaseName = "opsdesk-demo"
+$UniqueSuffix = "<unique-lowercase-suffix>"
 $FoundryProjectEndpoint = "<foundry-project-endpoint>"
-az deployment group validate --subscription $SubscriptionId -g $ResourceGroup -n main -f infra/main.bicep -p infra/main.bicepparam
-az deployment group create --subscription $SubscriptionId -g $ResourceGroup -n main -f infra/main.bicep -p infra/main.bicepparam
-.\infra\deploy-apps.ps1 -SubscriptionId $SubscriptionId -ResourceGroup $ResourceGroup -BaseName $BaseName
-.\infra\configure-entra.ps1 -TenantId "<tenant-id>"
-.\infra\configure-apim.ps1 -SubscriptionId $SubscriptionId -ResourceGroup $ResourceGroup -BaseName $BaseName -FoundryProjectEndpoint $FoundryProjectEndpoint
-.\infra\postdeploy.ps1 -SubscriptionId $SubscriptionId -ResourceGroup $ResourceGroup -BaseName $BaseName
+az login --tenant $TenantId
+$env:OPSDESK_BASE_NAME = $BaseName
+$env:OPSDESK_UNIQUE_SUFFIX = $UniqueSuffix
+az deployment group validate --subscription $SubscriptionId -g $ResourceGroup -n main -f infra\main.bicep -p infra\main.bicepparam
+az deployment group create --subscription $SubscriptionId -g $ResourceGroup -n main -f infra\main.bicep -p infra\main.bicepparam
+.\infra\deploy-apps.ps1 -SubscriptionId $SubscriptionId -ResourceGroup $ResourceGroup -BaseName $BaseName -UniqueSuffix $UniqueSuffix
+.\infra\configure-entra.ps1 -TenantId $TenantId
+.\infra\configure-apim.ps1 -TenantId $TenantId -SubscriptionId $SubscriptionId -ResourceGroup $ResourceGroup -BaseName $BaseName -UniqueSuffix $UniqueSuffix -FoundryProjectEndpoint $FoundryProjectEndpoint
+.\infra\postdeploy.ps1 -SubscriptionId $SubscriptionId -ResourceGroup $ResourceGroup -BaseName $BaseName -UniqueSuffix $UniqueSuffix
 ```
 
 The App Service plan and Developer APIM are billable. Bicep provisions infrastructure, `deploy-apps.ps1` publishes apps, `configure-entra.ps1` provisions demo identities, `configure-apim.ps1` configures gateway controls, and `postdeploy.ps1` registers API Center metadata. Use `deploy-apps.ps1 -AppNames mcp-tasks` to deploy just that changed server.
 
-Demo helper scripts derive deployed URLs from the base name. Pass the same value used at deployment, for example `.\scripts\demo1.ps1 -BaseName "<base-name>"` or `.\scripts\reset.ps1 -BaseName "<base-name>"`.
+### Resource-name uniqueness
+
+For example, `-BaseName opsdesk-demo -UniqueSuffix lab42` produces `app-opsdesk-demo-lab42-api`, `apim-opsdesk-demo-lab42`, `apic-opsdesk-demo-lab42`, and matching plan/telemetry names. Choose your own available suffix; no person's name or account identifier is built into the naming logic. Use lowercase letters, digits and internal hyphens; the combined `BaseName-UniqueSuffix` must be at most 45 characters. Azure still enforces global availability for public host names.
+
+Bicep accepts `baseName` and `uniqueSuffix` parameters; the checked-in `.bicepparam` reads their values from `OPSDESK_BASE_NAME` and `OPSDESK_UNIQUE_SUFFIX`. PowerShell deployment/configuration and demo helper scripts accept `-BaseName` and `-UniqueSuffix` explicitly. Supply the same pair at every step. Bicep's `resourceBaseName` output is the composed stem.
+
+Existing deployments can keep passing their complete, already-unique stem as `-BaseName` and omit `-UniqueSuffix`. Do not append the same suffix twice or change naming inputs when maintaining an existing environment: different inputs target different resource names, not an in-place rename. When using the parameter file in this legacy mode, ensure `OPSDESK_UNIQUE_SUFFIX` is unset.
+
+Demo helpers use the same naming rule, for example `.\scripts\demo1.ps1 -BaseName opsdesk-demo -UniqueSuffix lab42` or `.\scripts\reset.ps1 -BaseName opsdesk-demo -UniqueSuffix lab42`. This is offstage setup/rehearsal; the presenter walkthrough remains interactive. Logical API IDs such as `opsdesk-apim-secure` and the Entra roles are unchanged.
 
 ## Things we were tempted to change in the API (and didn't)
 

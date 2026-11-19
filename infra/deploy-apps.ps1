@@ -4,9 +4,12 @@ param(
   [Parameter(Mandatory)][string]$ResourceGroup,
   [Parameter(Mandatory)][string]$BaseName,
   [string]$Configuration = "Release",
-  [ValidateSet("api", "web", "mcp", "mcp-tasks")][string[]]$AppNames = @("api", "web", "mcp", "mcp-tasks")
+  [ValidateSet("api", "web", "mcp", "mcp-tasks")][string[]]$AppNames = @("api", "web", "mcp", "mcp-tasks"),
+  [string]$UniqueSuffix = ""
 )
 $ErrorActionPreference = "Stop"
+. "$PSScriptRoot\naming.ps1"
+$BaseName = Resolve-DemoBaseName $BaseName $UniqueSuffix
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $staging = Join-Path ([System.IO.Path]::GetTempPath()) "opsdesk-appservice-deploy-$([guid]::NewGuid().ToString('N'))"
 $apps = @(
