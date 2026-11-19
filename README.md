@@ -49,6 +49,10 @@ dotnet build MCP_Sample.slnx
 
 `configure-apim.ps1` merges endpoints, Foundry settings, and the shared `demo-open` key into ignored local development settings. It never prints keys or overwrites existing Entra secrets. Supply a real Foundry project and deployed model. Only console hosts run locally during the talk; API, dashboard, and MCP servers stay deployed.
 
+Each console project's tracked `appsettings.json` is a credential-free template. Copy it to `appsettings.Development.json` for manual setup, fill in your own Foundry project endpoint and deployment, and configure the API/APIM endpoints and credentials needed by that host. Empty strings are private-value placeholders; `<apim-name>` must be replaced with your gateway name. Leave telemetry empty to disable export, or supply your existing Application Insights connection string privately. The setup scripts also seed missing development keys from these templates while preserving existing local values.
+
+The development files are ignored by Git. Demo 3's `label`, `accent`, and `permissions` and Demo 4's `no-key`, `no-token`, `identity`, `open`, and `discover` are included explicitly so the [presenter walkthrough](docs/DEMO-PRESENTATION.md) requires editing values, not inventing missing keys. Keep `Foundry:MaxOutputTokens` null for the earlier hosts' model defaults; Demo 3/4 use 1200. User-secrets and environment variables still override JSON; keep credentials off the projected screen.
+
 The script sets `Foundry:Credential` to `AzureCliCredential` so the local agents use the Azure CLI login above. For existing local settings, add `"Credential": "AzureCliCredential"` inside `Foundry` in each console project's `appsettings.Development.json`. Without this setting, `DefaultAzureCredential` may select a different cached IDE identity or tenant, causing Foundry to return `Workspace not found` even for a valid project endpoint. Use `DefaultAzureCredential` explicitly when its credential chain is intended.
 
 ```bash

@@ -23,7 +23,7 @@ There are no launcher scripts or command-line application arguments in this walk
 
 **Start a console:** in Solution Explorer, right-click that project, then **Debug > Start New Instance**. Wait for its banner and type in the integrated terminal.
 
-**Change settings:** type `exit`, edit the project's `appsettings.Development.json`, save, then build and start that project through the IDE. Merge only the shown properties into the existing file; do not replace its Foundry, identity or telemetry configuration.
+**Change settings:** type `exit`, edit the project's `appsettings.Development.json`, save, then build and start that project through the IDE. All public switches shown below are included in the console projects' `appsettings.json` templates and seeded into development settings by setup. Edit their values; do not replace the file's Foundry, identity or telemetry configuration. For manual setup, copy the template to the ignored development file and fill in your own deployment values first.
 
 The programs read settings beside their executable, and the build copies the project settings there. Editing the project file alone does **not** change an already-running console. Keep this stop/edit/build/start pattern for the main presentation.
 
