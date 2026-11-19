@@ -24,7 +24,7 @@ foreach ($key in $metadata.Keys) {
   }
 }
 $null = Invoke-DemoRest "PUT" "${api}?api-version=$version" @{
-  properties = @{ title = "OpsDesk MCP (curated enterprise)"; kind = "mcp"
+  properties = @{ title = $apiId; kind = "mcp"
     description = "Read-only OpsDesk MCP tools with Entra authorization and a per-agent rate budget."
     customProperties = $metadata }
 }

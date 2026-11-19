@@ -50,3 +50,11 @@ Live helper checks covered rate-limit display, six successful cheap reads follow
 API-generated MCP telemetry also emitted zero-duration `forward-request` dependencies marked unsuccessful with no result code, alongside successful HTTP 200 APIM/API requests. Those rows remain visible in the trace query; they are not treated as proof that the successful tool calls failed.
 
 Desktop-only VS Code trust/approval interaction and physical terminal layout remain unverified. No credentials, account identifiers or deployment-specific hostnames are included in this report.
+
+## Resource-aligned display names
+
+The APIM display names now exactly match their resource IDs: `opsdesk-api`, `opsdesk-apim`, `opsdesk-apim-secure`, `opsdesk-code` and `opsdesk-tasks`. API Center's synchronized titles caught up to those names; the separately registered secure demo entry uses the same title.
+
+Renames used display-name-only PATCH requests, not generated-server replacement. Before/after comparisons confirmed that all non-name APIM properties, both generated tool collections and the secure policy were unchanged. Provisioning now reconciles generated-server names through PATCH and leaves matching names alone; local mocked tests covered rename, no-op and initial-creation paths.
+
+All available Demo 1-4 runtime scenarios were repeated against the renamed resources with the existing built console hosts: grounded briefings, incident/notification approvals, three typo rehearsals, 401/401/403, curated write refusal without mutation, discovery and three real-model rate-limit rehearsals. Earlier endpoints still served reads without JWT after the secure budget was exhausted. A new printed question trace again joined the agent, four APIM requests and four API requests. Desktop-only checks remain manual.

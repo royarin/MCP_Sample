@@ -2,6 +2,8 @@
 
 All OpsDesk routes are published through `apim-<base-name>`. Every route requires a subscription key.
 
+Display names deliberately match resource IDs: `opsdesk-api` is the original REST API; the four names below identify its MCP surfaces. APIM can list MCP servers in API views and in the creation picker too. Select `opsdesk-api`, not an existing MCP entry, when demonstrating API-to-MCP conversion. The REST route remains `/opsdesk`; changing its display name does not change that path.
+
 | MCP server | Demo | Protection | Backend |
 |---|---|---|---|
 | `opsdesk-code` | 2, 3 | product `demo-open` subscription key | Endpoint-shaped MCP server |
@@ -36,3 +38,5 @@ Isolation is endpoint-scoped, not key-scoped: the counter includes `opsdesk-apim
 Generated MCP tool resource IDs are prefixed with `secure-` because this APIM preview requires IDs to be globally unique across servers; the tool display names still describe the same GET operations. Existing generated APIs are not replaced on reruns, since a PUT would erase their tool collection.
 
 `postdeploy.ps1` registers the secure server in API Center. `scripts\demo4-ratelimit.ps1 -BaseName "<base-name>" -Show` displays the live budget; the optional burst helper verifies the error shape. Use `demo4-trace.kql` and `demo4-tools.kql` with your own App Insights names.
+
+API Center synchronization carries the APIM names into the catalog; source-managed titles can take time to catch up and cannot be overridden there. The separately registered `opsdesk-apim-secure` demo entry uses the same title. These two catalog records describe the same endpoint, not two deployed servers.
