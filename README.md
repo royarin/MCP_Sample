@@ -69,11 +69,9 @@ These are rehearsal flags for the first three hosts, not the on-stage script. `O
 
 ### Demo 3
 
-Run `.\scripts\demo3.ps1 -BaseName "<base-name>"` for labeled endpoint-shaped (yellow) and task-shaped (cyan) panes. Type the same inventory briefing into both. `stats` shows cumulative calls, turns, input/output tokens and wall time; `reset-stats` clears those totals without changing the conversation.
+Run the same inventory briefing once against `opsdesk-code` and once against `opsdesk-tasks`, using `OpsBot.Mcp` with the same model and credentials. Compare the automatically printed scorecards: model turns, tool calls, input/output tokens and elapsed time. The [presenter walkthrough](docs/DEMO-PRESENTATION.md) contains the two-run sequence.
 
-For the typo demonstration, request an incident for `inventry`, approve the attempted write, then confirm `inventory` only after the server's suggestion. A corrected retry requires a second write approval; the server must not silently correct a write target.
-
-Run `.\scripts\demo3-measure.ps1 -BaseName "<base-name>"` separately for the read-only measurement report in `docs\demo3-measurements.md`. It requires actual model usage for both runs and refuses to write a zero-token or failed measurement.
+For offstage rehearsal, `.\scripts\demo3-measure.ps1 -BaseName "<base-name>"` writes a read-only measurement report to ignored `artifacts\demo3-measurements.md`. It requires actual model usage for both runs and refuses to write a zero-token or failed measurement.
 
 Measured against the deployed endpoints with `gpt-4o` on 2026-11-19:
 
@@ -84,7 +82,7 @@ Measured against the deployed endpoints with `gpt-4o` on 2026-11-19:
 | Input / output tokens | 3033 / 331 | 2888 / 190 |
 | Wall time (s) | 10.08 | 13.29 |
 
-These are observed results, not latency guarantees: fewer tool calls did not make the task-shaped run faster in this sample. See [validation evidence](docs/demo-validation.md) for all four demos and the remaining desktop-only checks.
+These are observed results, not latency guarantees: fewer tool calls did not make the task-shaped run faster in this sample. Use the [demo manual](docs/DEMO-MANUAL.md) for preparation and rehearsal and the [presenter walkthrough](docs/DEMO-PRESENTATION.md) on stage. These are the only persisted documents under `docs`.
 
 ### Demo 4
 
