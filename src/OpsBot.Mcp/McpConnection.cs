@@ -1,5 +1,3 @@
-using System.Text.Json;
-using Azure.Core;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using ModelContextProtocol.Client;
@@ -8,9 +6,7 @@ using OpsBot.Shared;
 namespace OpsBot.Mcp;
 
 /// <summary>
-/// Connects to one MCP endpoint and returns its tools as AIFunctions. Handles the three ways a server is
-/// reached in the demos: plain (Container Apps), APIM subscription key (opsdesk-apim), Entra bearer token
-/// (opsdesk-secure). Prints what it discovered and what the catalogue costs in tokens.
+/// Connects to an MCP endpoint with an optional APIM subscription key and discovers its tools.
 /// </summary>
 public static class McpConnection
 {
@@ -25,9 +21,6 @@ public static class McpConnection
             headers["Ocp-Apim-Subscription-Key"] = key;
         else if (endpointUri.Host.EndsWith(".azure-api.net", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Mcp:ApimSubscriptionKey is required when Mcp:Endpoint points to API Management.");
-
-        if (string.Equals(config["Mcp:Auth"], "entra", StringComparison.OrdinalIgnoreCase))
-            headers["Authorization"] = "Bearer " + await AcquireTokenAsync(config, ct);
 
         // ModelContextProtocol 1.x: HttpClientTransport speaks Streamable HTTP (falls back to legacy SSE).
         var transport = new HttpClientTransport(new HttpClientTransportOptions
@@ -45,34 +38,17 @@ public static class McpConnection
 
         var (count, tokens) = ToolCatalogMeter.Measure(tools, AgentConfig.Deployment(config));
         var name = client.ServerInfo?.Name ?? endpointUri.Host;
-        Ui.Info($"connected to {endpoint}");
-        Ui.Info($"discovered {count} tool(s) from '{name}' · {tokens:N0} tokens of tool definitions sent on every model call");
+        var prefix = $"discovered {count} tools from '";
+        var suffix = $"' · {tokens:N0} tokens of tool definitions sent on every model call";
+        var available = Math.Max(0, 97 - prefix.Length - suffix.Length);
+        var shortName = name.Length > available && available >= 3 ? name[..(available - 3)] + "..." : name;
+        var line = prefix + shortName + suffix;
+        if (line.Length <= 97) Ui.Info(line);
+        else
+        {
+            Ui.Info($"discovered {count} tools from '{name}' · {tokens:N0} tokens of tool definitions");
+            Ui.Info("sent on every model call");
+        }
         return new Connected(client, tools, name, count, tokens);
-    }
-
-    private static async Task<string> AcquireTokenAsync(IConfiguration config, CancellationToken ct)
-    {
-        var e = config.GetSection("Mcp:Entra");
-        var scope = e["Scope"] ?? "api://opsdesk-mcp/.default";
-        var role = e["Role"] ?? "Reader";
-        var identity = e.GetSection("Identities").GetSection(role);
-        TokenCredential credential = AgentConfig.CreateCredential(e["TenantId"], identity["ClientId"], identity["ClientSecret"]);
-        var token = await credential.GetTokenAsync(new TokenRequestContext([scope]), ct);
-
-        var claims = DecodeJwtPayload(token.Token);
-        var roles = claims.TryGetProperty("roles", out var r) ? string.Join(", ", r.EnumerateArray().Select(x => x.GetString())) : "-";
-        var who = claims.TryGetProperty("azp", out var azp) ? azp.GetString()
-                : claims.TryGetProperty("appid", out var appid) ? appid.GetString()
-                : claims.TryGetProperty("preferred_username", out var upn) ? upn.GetString() : "?";
-        Ui.Info($"identity: {who}  roles: [{roles}]  expires: {token.ExpiresOn:HH:mm}Z");
-        return token.Token;
-    }
-
-    /// <summary>Display only – validation happens at the gateway.</summary>
-    private static JsonElement DecodeJwtPayload(string jwt)
-    {
-        var payload = jwt.Split('.')[1].Replace('-', '+').Replace('_', '/');
-        payload = payload.PadRight(payload.Length + (4 - payload.Length % 4) % 4, '=');
-        return JsonDocument.Parse(Convert.FromBase64String(payload)).RootElement;
     }
 }
