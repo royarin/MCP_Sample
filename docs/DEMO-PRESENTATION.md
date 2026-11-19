@@ -128,100 +128,32 @@ No console project is needed for this demo. Use Copilot Chat and the deployed se
 
 **Transition:** "Both approaches expose tools. Next, let's see how the shape of those tools changes the model's work."
 
-## Demo 3 - change the tool surface, not the host
+## Demo 3 - same prompt, different tool shape
 
-The main path switches one host's settings visibly, without launcher arguments. Keep the first scorecard visible or note its figures before switching. Side-by-side terminal choreography is not required for this walkthrough.
+Use `OpsBot.Mcp` twice with the same model, credentials and data. Only the MCP endpoint changes. Before this segment, leave `label` empty in `src\OpsBot.Mcp\appsettings.Development.json` so the console identifies the discovered server rather than a fixed label.
 
-### 3A. Connect the generic host to endpoint-shaped tools
+### 3A. Run the prompt against MCP code
 
-1. **Show:** `src\OpsBot.Mcp\appsettings.Development.json`, with credentials kept private.
-2. Merge these public settings, substituting the actual APIM host name:
-
-   ```json
-   {
-     "Mcp": {
-       "Endpoint": "https://<apim-name>.azure-api.net/opsdesk-code/mcp"
-     },
-     "label": "endpoint-shaped",
-     "accent": "yellow",
-     "permissions": "ask"
-   }
-   ```
-
-3. **Say:** "The endpoint chooses the tool catalog. The label and color are just presentation. Approval remains enabled."
-4. Build and **start:** `OpsBot.Mcp`.
-5. **Point at:** ten discovered tools and the catalog-token line.
-6. **Say:** "Tool definitions cost tokens before the user has asked anything."
-7. **Type:**
+1. Set `Mcp:Endpoint` to `https://<apim-name>.azure-api.net/opsdesk-code/mcp`, using the actual APIM host name. Save, build and start `OpsBot.Mcp`.
+2. **Type:**
 
    ```text
    What's wrong with inventory, who do I call, is there a runbook, and is anything open on it?
    ```
 
-8. **Point at:** the individual status, owner, runbook and incident calls. Expect about four calls; read the actual scorecard rather than promising a fixed model response.
-9. Type `stats`. Keep the result visible or note the numbers.
+3. Keep the automatically printed answer scorecard visible or note its figures.
 
-### 3B. Show the endpoint-shaped typo
+### 3B. Run the identical prompt against MCP tasks
 
-1. In the same host, **type:**
-
-   ```text
-   Raise a high incident for inventry: replication lag, reported by Arin, do not notify yet.
-   ```
-
-2. At the attempted-write approval, type `y`.
-3. **Point at:** the raw API not-found JSON. Do not confirm a corrected write on this side.
-4. **Say:** "The API error is accurate, but it does not help the agent recover the task."
-5. Type `stats`, then `exit`.
-
-### 3C. Change only the catalog and its presentation label
-
-1. Return to the same development settings file.
-2. Change these properties; keep the same model, host, subscription key and approval mode:
-
-   ```json
-   {
-     "Mcp": {
-       "Endpoint": "https://<apim-name>.azure-api.net/opsdesk-tasks/mcp"
-     },
-     "label": "task-shaped",
-     "accent": "cyan"
-   }
-   ```
-
-3. **Say:** "I have changed where the host discovers tools. I have not rewritten the host."
-4. Save, build and **start:** `OpsBot.Mcp`.
-5. **Point at:** five discovered tools, including `get_system_briefing`.
-6. Type the same briefing question.
-7. **Point at:** one briefing tool call, then its scorecard. The response includes the current incident state, not necessarily an empty incident list.
-8. **Say:** "This tool represents the engineer's task, rather than one HTTP endpoint. Compare calls, turns and actual tokens. Latency varies; fewer tools or calls do not guarantee a faster answer."
-
-For orientation only, the recorded rehearsal used four versus one calls, two model turns each, and 590 versus 520 catalog tokens. Use the live numbers; `demo3-measurements.md` contains the dated sample.
-
-### 3D. Show an error the agent can act on, with a second approval
-
-1. **Type:**
+1. Type `exit`, change only `Mcp:Endpoint` to `https://<apim-name>.azure-api.net/opsdesk-tasks/mcp`, then save, build and start a fresh `OpsBot.Mcp` session.
+2. **Type the identical prompt:**
 
    ```text
-   Raise a high incident for inventry: replication lag, reported by Arin, do not notify yet.
+   What's wrong with inventory, who do I call, is there a runbook, and is anything open on it?
    ```
 
-2. At the attempted-write approval, type `y`.
-3. **Point at:** `Unknown system 'inventry'` and `Did you mean 'inventory'?`
-4. Wait for the agent to ask for correction confirmation.
-5. **Type:**
-
-   ```text
-   Yes, inventory. Raise it for inventory without notifying the owner.
-   ```
-
-6. At the corrected-write approval, type `y` again.
-7. Refresh the dashboard. Point at the new High incident; do not assume its sequence number. The Critical incident from Demo 2 should still exist.
-8. **Say:** "A useful error gives a recovery path. It does not silently change the target of a write. Confirming the corrected ID and approving the new write are separate steps."
-9. Type `stats` to show the cumulative totals. Do not compare these write-inclusive totals with the first briefing-only scorecard.
-10. **Show:** `src\OpsBot.Mcp\McpConnection.cs`, specifically `ListToolsAsync()`, then the tools passed into the agent in `Program.cs`.
-11. **Say:** "Discovery replaced the hand-wired functions from Demo 1. Tool design changed the model's work."
-12. Type `exit`.
+3. **Observe:** compare the two automatically printed scorecards: model turns, tool calls, input/output tokens and elapsed time. Describe the live numbers; fewer calls do not guarantee fewer turns or lower latency.
+4. **Say:** "Same host, same model, same question. The tool shape changed how much work the model did."
 
 ## Demo 4 - show the controls, then show them enforced
 
