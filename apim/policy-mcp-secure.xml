@@ -53,6 +53,7 @@
         <return-response>
           <set-status code="200" reason="OK" />
           <set-header name="Content-Type" exists-action="override"><value>application/json</value></set-header>
+          <set-header name="Access-Control-Allow-Origin" exists-action="override"><value>*</value></set-header>
           <set-body>@{
             var retry = context.Variables.ContainsKey("mcpRetryAfter") ? ((int)context.Variables["mcpRetryAfter"]).ToString() : context.Response.Headers.GetValueOrDefault("Retry-After", "{{opsdesk-ratelimit-period}}");
             var id = JToken.Parse((string)context.Variables.GetValueOrDefault("mcpRequestId", "null"));

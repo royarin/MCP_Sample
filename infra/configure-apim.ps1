@@ -238,7 +238,7 @@ if ($LASTEXITCODE -ne 0) { throw "Could not retrieve the demo subscription key f
 $subscriptionKey = ($secretsJson | ConvertFrom-Json).primaryKey
 if ([string]::IsNullOrWhiteSpace($subscriptionKey)) { throw "APIM returned an empty primary subscription key." }
 } else {
-  Write-Host "Leaving the existing Demo 1-3 gateway resources unchanged." -ForegroundColor Cyan
+  Write-Host "Leaving the existing Demo 1-3 API registrations and tool catalogs unchanged." -ForegroundColor Cyan
   $operations = az apim api operation list -g $ResourceGroup -n $ApimName --api-id opsdesk-api -o json --only-show-errors | ConvertFrom-Json
   if ($LASTEXITCODE -ne 0) { throw "The existing imported OpsDesk API is required for EnterpriseOnly." }
   $openTools = Invoke-DemoRest "GET" "$baseUrl/apis/opsdesk-apim/tools?api-version=$apiVersion" $null
@@ -361,6 +361,8 @@ Set-LocalSettings "src\OpsBot.Enterprise\appsettings.Development.json" @{
   ApiCenter = @{ SubscriptionId = $SubscriptionId; ResourceGroup = $ResourceGroup; Name = "apic-$BaseName"; ApiId = "opsdesk-apim-secure" }
   APPLICATIONINSIGHTS_CONNECTION_STRING = $appsInsights
 }
+
+& "$PSScriptRoot\configure-cors.ps1" -SubscriptionId $SubscriptionId -ResourceGroup $ResourceGroup -BaseName $BaseName
 
 Write-Host "APIM configured: REST API, endpoint-shaped MCP, task-shaped MCP, API-backed MCP, and curated enterprise MCP." -ForegroundColor Green
 Write-Host "Product 'demo-open' requires a subscription key. The key was written only to ignored appsettings.Development.json files." -ForegroundColor Green
