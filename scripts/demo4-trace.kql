@@ -1,0 +1,6 @@
+let targetTraceId = "<paste trace id>";
+union app('<apps-appinsights-name>').requests, app('<apps-appinsights-name>').dependencies,
+      app('<apim-appinsights-name>').requests, app('<apim-appinsights-name>').dependencies
+| where operation_Id == targetTraceId
+| project timestamp, appName, itemType, cloud_RoleName, name, duration, resultCode, success
+| order by timestamp asc

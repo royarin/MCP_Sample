@@ -7,7 +7,7 @@
                         "headers": { "Ocp-Apim-Subscription-Key": "${input:apimKey}" } },
     "opsdesk-apim":   { "type": "http", "url": "https://<apim-name>.azure-api.net/opsdesk-apim/mcp",
                         "headers": { "Ocp-Apim-Subscription-Key": "${input:apimKey}" } },
-    "opsdesk-secure": { "type": "http", "url": "https://<apim-name>.azure-api.net/opsdesk-secure/mcp",
+    "opsdesk-apim-secure": { "type": "http", "url": "https://<apim-name>.azure-api.net/opsdesk-apim-secure/mcp",
                         "headers": {
                           "Ocp-Apim-Subscription-Key": "${input:apimKey}",
                           "Authorization": "Bearer ${input:token}"
@@ -15,6 +15,6 @@
   },
   "inputs": [
     { "id": "apimKey", "type": "promptString", "password": true, "description": "APIM subscription key (product demo-open)" },
-    { "id": "token",   "type": "promptString", "password": true, "description": "Entra access token for api://opsdesk-mcp (scripts/tokens.ps1)" }
+    { "id": "token",   "type": "promptString", "password": true, "description": "Entra app token with Ops.Agent (prefer OpsBot.Enterprise for Demo 4)" }
   ]
 }

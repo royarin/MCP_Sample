@@ -3,6 +3,7 @@
     <Project Path="src/OpsBot.Shared/OpsBot.Shared.csproj" />
     <Project Path="src/OpsBot.NoTools/OpsBot.NoTools.csproj" />
     <Project Path="src/OpsBot.Tools/OpsBot.Tools.csproj" />
+    <Project Path="src/OpsBot.Enterprise/OpsBot.Enterprise.csproj" />
     <Project Path="src/OpsBot.Mcp/OpsBot.Mcp.csproj" />
     <Project Path="src/OpsDesk.Api/OpsDesk.Api.csproj" />
     <Project Path="src/OpsDesk.Mcp/OpsDesk.Mcp.csproj" />
